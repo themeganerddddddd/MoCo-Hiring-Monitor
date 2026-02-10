@@ -2,7 +2,7 @@ name: Daily MoCo Hiring Monitor
 
 on:
   schedule:
-    - cron: "15 10 * * *"  # 10:15 UTC daily (5:15am ET)
+    - cron: "30 17 * * *"  # 10:15 UTC daily (5:15am ET)
   workflow_dispatch:
 
 permissions:
