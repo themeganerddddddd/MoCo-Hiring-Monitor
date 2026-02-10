@@ -10,13 +10,22 @@ from datetime import datetime, date
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 import yaml
 from dotenv import load_dotenv
 from shapely.geometry import shape, Point
 
 JSEARCH_SEARCH_URL = "https://jsearch.p.rapidapi.com/search"
 
-MD_COUNTIES_GEOJSON_RAW = "https://raw.githubusercontent.com/frankrowe/maryland-geojson/master/maryland-counties.geojson"
+# ✅ Local GeoJSON path (place file in one of these)
+LOCAL_MD_COUNTIES_PATHS = [
+    "./data/maryland-counties.geojson",
+    "./maryland-counties.geojson",
+]
+
+# Cache just Montgomery County geometry here (created automatically)
 MOCO_CACHE_PATH = "./data/moco_boundary.geojson"
 
 
@@ -66,30 +75,78 @@ def parse_job_posted_at(job: Dict[str, Any]) -> Optional[str]:
     return str(v)
 
 
+def _find_local_md_geojson_path() -> Optional[str]:
+    for p in LOCAL_MD_COUNTIES_PATHS:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _extract_moco_feature(gj: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract Montgomery County feature from a Maryland counties FeatureCollection.
+    Tries a few common property keys for the county name.
+    """
+    moco_feat = None
+    for feat in gj.get("features", []):
+        props = feat.get("properties", {}) or {}
+        # common keys seen in county geojson files
+        candidate = (
+            props.get("NAME")
+            or props.get("name")
+            or props.get("County")
+            or props.get("county")
+            or ""
+        )
+        name = str(candidate).strip().lower()
+        if name == "montgomery":
+            moco_feat = feat
+            break
+
+    if not moco_feat:
+        # Helpful debugging: show what keys exist in properties
+        sample = gj.get("features", [{}])[0].get("properties", {}) if gj.get("features") else {}
+        raise RuntimeError(
+            "Could not find Montgomery County in your maryland-counties.geojson.\n"
+            f"Checked property keys NAME/name/County/county. Sample properties keys: {list(sample.keys())}"
+        )
+    return moco_feat
+
+
 def load_moco_polygon() -> Any:
+    """
+    ✅ Uses LOCAL maryland-counties.geojson (no downloads).
+    Caches Montgomery County feature to ./data/moco_boundary.geojson.
+    Returns a Shapely geometry.
+    """
     ensure_dirs()
-    if not os.path.exists(MOCO_CACHE_PATH):
-        r = requests.get(MD_COUNTIES_GEOJSON_RAW, timeout=60)
-        r.raise_for_status()
-        gj = r.json()
 
-        moco_feat = None
-        for feat in gj.get("features", []):
-            props = feat.get("properties", {}) or {}
-            name = (props.get("NAME") or props.get("name") or props.get("County") or "").strip()
-            if name.lower() == "montgomery":
-                moco_feat = feat
-                break
+    # If cache exists, just load it
+    if os.path.exists(MOCO_CACHE_PATH):
+        with open(MOCO_CACHE_PATH, "r", encoding="utf-8") as f:
+            feat = json.load(f)
+        return shape(feat["geometry"])
 
-        if not moco_feat:
-            raise RuntimeError("Could not find Montgomery County geometry in downloaded GeoJSON.")
+    # Otherwise load local counties geojson
+    local_path = _find_local_md_geojson_path()
+    if not local_path:
+        raise RuntimeError(
+            "Missing local Maryland counties GeoJSON.\n"
+            "Place it at one of:\n"
+            "  - ./data/maryland-counties.geojson (recommended)\n"
+            "  - ./maryland-counties.geojson\n"
+        )
 
-        with open(MOCO_CACHE_PATH, "w", encoding="utf-8") as f:
-            json.dump(moco_feat, f)
+    with open(local_path, "r", encoding="utf-8") as f:
+        gj = json.load(f)
 
-    with open(MOCO_CACHE_PATH, "r", encoding="utf-8") as f:
-        feat = json.load(f)
-    return shape(feat["geometry"])
+    moco_feat = _extract_moco_feature(gj)
+
+    # Cache MoCo feature for faster runs
+    with open(MOCO_CACHE_PATH, "w", encoding="utf-8") as f:
+        json.dump(moco_feat, f)
+
+    return shape(moco_feat["geometry"])
 
 
 def is_job_in_moco(job: Dict[str, Any], moco_geom: Any) -> bool:
@@ -119,10 +176,6 @@ def is_job_in_moco(job: Dict[str, Any], moco_geom: Any) -> bool:
 
 
 def places_text_search(company_name: str, google_places_key: str) -> Optional[Dict[str, Any]]:
-    """
-    Uses Places Text Search (legacy) to find a likely business location.
-    We bias query to Montgomery County and Maryland.
-    """
     if not google_places_key:
         return None
 
@@ -131,7 +184,7 @@ def places_text_search(company_name: str, google_places_key: str) -> Optional[Di
     params = {"query": q, "key": google_places_key}
 
     try:
-        r = requests.get(url, params=params, timeout=20)
+        r = requests.get(url, params=params, timeout=(10, 20))
         r.raise_for_status()
         payload = r.json()
         results = payload.get("results") or []
@@ -143,16 +196,6 @@ def places_text_search(company_name: str, google_places_key: str) -> Optional[Di
 
 
 def verify_company_with_places(company_name: str, moco_geom: Any, google_places_key: str) -> Dict[str, Any]:
-    """
-    Returns:
-      verified: bool
-      place_id: str
-      address: str
-      lat: float
-      lon: float
-      reason: str
-    Verification is: we found a Places result whose lat/lon falls inside MoCo polygon.
-    """
     if not google_places_key:
         return {"verified": False, "place_id": "", "address": "", "lat": None, "lon": None, "reason": "no_places_key"}
 
@@ -175,17 +218,47 @@ def verify_company_with_places(company_name: str, moco_geom: Any, google_places_
     return {"verified": False, "place_id": place_id, "address": address, "lat": None, "lon": None, "reason": "no_latlon"}
 
 
+def build_retry_session() -> requests.Session:
+    """
+    Requests session with retries + exponential backoff for transient RapidAPI issues.
+    Retries on: timeouts, 429, and common 5xx.
+    """
+    retry = Retry(
+        total=6,
+        connect=6,
+        read=6,
+        backoff_factor=1.5,  # 0s, 1.5s, 3s, 6s, 12s...
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    s = requests.Session()
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
+
+
 @dataclass
 class JSearchClient:
     rapidapi_key: str
     rapidapi_host: str = "jsearch.p.rapidapi.com"
-    timeout_s: int = 30
+    timeout_s: int = 90  # ⬅️ bump read timeout (was 30)
+    connect_timeout_s: int = 10
+    session: Optional[requests.Session] = None
+
+    def __post_init__(self):
+        if self.session is None:
+            self.session = build_retry_session()
 
     def search(self, query: str, page: int = 1, num_pages: int = 1, date_posted: str = "today", country: str = "us") -> List[Dict[str, Any]]:
         headers = {"X-RapidAPI-Key": self.rapidapi_key, "X-RapidAPI-Host": self.rapidapi_host}
         params = {"query": query, "page": str(page), "num_pages": str(num_pages), "date_posted": date_posted, "country": country}
 
-        resp = requests.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=self.timeout_s)
+        timeout = (self.connect_timeout_s, self.timeout_s)
+        resp = self.session.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=timeout)
         resp.raise_for_status()
         payload = resp.json()
         data = payload.get("data") or []
@@ -193,7 +266,6 @@ class JSearchClient:
 
 
 def init_db(conn: sqlite3.Connection):
-    # jobs table
     conn.execute("""
     CREATE TABLE IF NOT EXISTS jobs (
         job_id TEXT PRIMARY KEY,
@@ -213,7 +285,6 @@ def init_db(conn: sqlite3.Connection):
     );
     """)
 
-    # companies table (now includes Places verification info)
     conn.execute("""
     CREATE TABLE IF NOT EXISTS companies (
         employer_norm TEXT PRIMARY KEY,
@@ -228,7 +299,6 @@ def init_db(conn: sqlite3.Connection):
     );
     """)
 
-    # runs table (now includes coverage stats)
     conn.execute("""
     CREATE TABLE IF NOT EXISTS runs (
         run_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,7 +314,6 @@ def init_db(conn: sqlite3.Connection):
     """)
     conn.commit()
 
-    # lightweight migrations (add columns if older DB exists)
     _ensure_column(conn, "companies", "places_verified", "INTEGER DEFAULT 0")
     _ensure_column(conn, "companies", "places_reason", "TEXT DEFAULT ''")
     _ensure_column(conn, "companies", "places_place_id", "TEXT DEFAULT ''")
@@ -369,7 +438,12 @@ def run_daily(config_path: str):
 
         time.sleep(0.25)
 
-        jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
+        try:
+            jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
+        except requests.exceptions.RequestException as e:
+            print(f"[WARN] JSearch failed for query={q!r}: {e}. Skipping this query for today.")
+            jobs = []
+
         jobs_scanned_count += len(jobs)
 
         for job in jobs:
@@ -387,10 +461,8 @@ def run_daily(config_path: str):
                 now_row = conn.execute("SELECT first_seen_run_date FROM companies WHERE employer_norm = ?", (employer_norm,)).fetchone()
 
                 if existed is None and now_row and now_row[0] == run_date:
-                    # New company detected today
                     new_companies_today.add(employer_norm)
 
-                    # Places verification (only for new companies to keep API usage low)
                     if google_places_key:
                         v = verify_company_with_places(employer_name, moco_geom, google_places_key)
                         update_company_places_verification(conn, employer_norm, v)
@@ -410,7 +482,6 @@ def run_daily(config_path: str):
     ))
     conn.commit()
 
-    # Build daily new-company CSV including Places verification info
     rows = []
     for employer_norm in sorted(new_companies_today):
         comp = conn.execute("""
