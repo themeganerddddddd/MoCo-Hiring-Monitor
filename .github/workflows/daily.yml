@@ -2,7 +2,7 @@ name: Daily MoCo Hiring Monitor
 
 on:
   schedule:
-    - cron: "15 10 * * *"  # 10:15 UTC daily (5:15am ET)
+    - cron: "22 22 * * *"  # 10:15 UTC daily (5:15am ET)
   workflow_dispatch:
 
 permissions:
@@ -49,7 +49,7 @@ jobs:
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           DB_PATH: ./data/moco_jobs.sqlite
-          INDICATORS_TOP_N: "20"   # increase if your quota allows, e.g. "100"
+          INDICATORS_TOP_N: "50"   # increase if your quota allows, e.g. "100"
         run: |
           python dashboard.py
 
@@ -59,4 +59,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git add data outputs docs
           git commit -m "Daily update" || echo "No changes"
+
           git push
