@@ -6,11 +6,15 @@ import csv
 import time
 import sqlite3
 import argparse
+import random
 from dataclasses import dataclass
 from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 import yaml
 from dotenv import load_dotenv
 from shapely.geometry import shape, Point
@@ -173,7 +177,8 @@ def places_text_search(company_name: str, google_places_key: str) -> Optional[Di
     params = {"query": q, "key": google_places_key}
 
     try:
-        r = requests.get(url, params=params, timeout=20)
+        # keep places timeouts reasonable
+        r = requests.get(url, params=params, timeout=(10, 20))
         r.raise_for_status()
         payload = r.json()
         results = payload.get("results") or []
@@ -205,6 +210,33 @@ def verify_company_with_places(company_name: str, moco_geom: Any, google_places_
         return {"verified": False, "place_id": place_id, "address": address, "lat": float(lat), "lon": float(lon), "reason": "outside_moco"}
 
     return {"verified": False, "place_id": place_id, "address": address, "lat": None, "lon": None, "reason": "no_latlon"}
+
+
+# ----------------------------
+# Reliability: retries + bumps
+# ----------------------------
+
+def build_retry_session() -> requests.Session:
+    """
+    Requests session with retries + exponential backoff for transient RapidAPI issues.
+    Retries on: timeouts, 429, and common 5xx.
+    """
+    retry = Retry(
+        total=6,
+        connect=6,
+        read=6,
+        backoff_factor=1.5,  # 0s, 1.5s, 3s, 6s, 12s...
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    s = requests.Session()
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
 
 
 # ----------------------------
@@ -252,34 +284,29 @@ def derive_job_requirements(job: Dict[str, Any]) -> str:
 
     tags = set()
 
-    # Degree heuristics
     if any(k in text for k in [
         "no degree", "no-degree", "no diploma", "no diploma required",
         "high school or equivalent", "high school diploma or equivalent"
     ]):
         tags.add("no_degree")
 
-    # Experience heuristics (entry-level / none)
     if any(k in text for k in [
         "no experience", "entry level", "entry-level", "0 years", "zero years",
         "training provided", "no prior experience"
     ]):
         tags.add("no_experience")
 
-    # Under 3 years signals
     if any(k in text for k in [
         "1 year", "one year", "2 years", "two years", "1-2 years", "2+ years"
     ]):
         tags.add("under_3_years_experience")
 
-    # 3+ years signals
     if any(k in text for k in [
         "3 years", "3+ years", "four years", "4 years", "5 years", "6 years",
         "7 years", "8 years", "10 years", "5+ years"
     ]):
         tags.add("more_than_3_years_experience")
 
-    # If both, keep the stronger
     if "more_than_3_years_experience" in tags and "under_3_years_experience" in tags:
         tags.discard("under_3_years_experience")
 
@@ -355,11 +382,18 @@ def derive_fields(job: Dict[str, Any]) -> str:
 
     return ",".join(sorted(tags))
 
+
 @dataclass
 class JSearchClient:
     rapidapi_key: str
     rapidapi_host: str = "jsearch.p.rapidapi.com"
-    timeout_s: int = 30
+    timeout_s: int = 90               # ⬅️ bump read timeout
+    connect_timeout_s: int = 10       # ⬅️ separate connect timeout
+    session: Optional[requests.Session] = None
+
+    def __post_init__(self):
+        if self.session is None:
+            self.session = build_retry_session()
 
     def search(
         self,
@@ -371,8 +405,9 @@ class JSearchClient:
     ) -> List[Dict[str, Any]]:
         headers = {"X-RapidAPI-Key": self.rapidapi_key, "X-RapidAPI-Host": self.rapidapi_host}
         params = {"query": query, "page": str(page), "num_pages": str(num_pages), "date_posted": date_posted, "country": country}
+        timeout = (self.connect_timeout_s, self.timeout_s)
 
-        resp = requests.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=self.timeout_s)
+        resp = self.session.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=timeout)
         resp.raise_for_status()
         payload = resp.json()
         data = payload.get("data") or []
@@ -513,8 +548,8 @@ def insert_job_if_new(conn: sqlite3.Connection, job: Dict[str, Any], search_quer
 
     # NEW derived fields
     job_requirements = derive_job_requirements(job)
-    raw_fields = derive_fields(job)           # e.g. "technology,life_sciences"
-    fields = f",{raw_fields}," if raw_fields else ""   # e.g. ",technology,life_sciences,"
+    raw_fields = derive_fields(job)                 # "technology,life_sciences"
+    fields = f",{raw_fields}," if raw_fields else ""  # stored for LIKE '%,tag,%'
     salary = extract_salary_text(job)
 
     cur = conn.execute("""
@@ -541,6 +576,9 @@ def run_daily(config_path: str):
     rapidapi_host = os.getenv("RAPIDAPI_HOST", "jsearch.p.rapidapi.com").strip()
     google_places_key = os.getenv("GOOGLE_PLACES_KEY", "").strip()
     db_path = os.getenv("DB_PATH", "./data/moco_jobs.sqlite").strip()
+
+    # Optional: tune delay without code changes
+    api_delay_s = float(os.getenv("JSEARCH_DELAY_SECONDS", "0.25"))
 
     if not rapidapi_key:
         raise SystemExit("Missing RAPIDAPI_KEY. Copy .env.example to .env and fill it in.")
@@ -572,9 +610,15 @@ def run_daily(config_path: str):
         if not q:
             continue
 
-        time.sleep(0.25)
+        # Delay (with a tiny jitter to be nicer to the API + reduce thundering herd)
+        time.sleep(api_delay_s + random.uniform(0.0, 0.15))
 
-        jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
+        try:
+            jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
+        except requests.exceptions.RequestException as e:
+            print(f"[WARN] JSearch failed for query={q!r}: {e}. Skipping this query for today.")
+            jobs = []
+
         jobs_scanned_count += len(jobs)
 
         for job in jobs:
@@ -732,6 +776,7 @@ def run_monthly(month: str):
     print(f"  Month: {month}")
     print(f"  Output: {out_path}")
 
+
 def retag_fields_in_db(db_path: str, days_back: int = 180):
     """
     One-time repair:
@@ -756,7 +801,6 @@ def retag_fields_in_db(db_path: str, days_back: int = 180):
             "job_title": job_title,
             "employer_name": employer_name,
             # We don't have description columns saved in DB currently, so we retag from title+employer.
-            # (Still very useful for aero/defense + life sciences company names.)
         }
         raw = derive_fields(job)
         wrapped = f",{raw}," if raw else ""
@@ -766,6 +810,7 @@ def retag_fields_in_db(db_path: str, days_back: int = 180):
     conn.commit()
     conn.close()
     print(f"Retag complete: updated {updated} jobs since {cutoff}.")
+
 
 def main():
     ap = argparse.ArgumentParser(description="MoCo hiring monitor using JSearch (RapidAPI).")
@@ -777,11 +822,18 @@ def main():
     m = sub.add_parser("monthly", help="Generate monthly top-companies report from stored data.")
     m.add_argument("--month", required=True, help="Month in YYYY-MM format (e.g., 2026-01)")
 
+    # Optional maintenance command
+    r = sub.add_parser("retag", help="Recompute job fields tags in DB for the last N days.")
+    r.add_argument("--db", default=os.getenv("DB_PATH", "./data/moco_jobs.sqlite"), help="DB path")
+    r.add_argument("--days-back", type=int, default=180, help="How many days back to retag")
+
     args = ap.parse_args()
     if args.cmd == "daily":
         run_daily(args.config)
     elif args.cmd == "monthly":
         run_monthly(args.month)
+    elif args.cmd == "retag":
+        retag_fields_in_db(args.db, args.days_back)
 
 
 if __name__ == "__main__":
