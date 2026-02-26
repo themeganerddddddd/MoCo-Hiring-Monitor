@@ -1085,9 +1085,9 @@ def build_company_indicators_page(db_path: str) -> str:
         this_cnt = obj["cnt"]
         last_cnt = last_map.get(employer_norm, 0)
 
-        pct = "NA"
+        pct_change = "NA"
         if last_cnt and last_cnt > 0:
-            pct = f"{((this_cnt - last_cnt) / last_cnt) * 100:.1f}%"
+            pct_change = f"{((this_cnt - last_cnt) / last_cnt) * 100:.1f}%"
 
         titles_this = top_titles_for_norm(employer_norm, this_start, this_end)
         titles_last = top_titles_for_norm(employer_norm, last_start, last_end)
@@ -1144,7 +1144,7 @@ def build_company_indicators_page(db_path: str) -> str:
             "company": company,
             "this_cnt": this_cnt,
             "last_cnt": last_cnt if last_cnt else "NA",
-            "pct": pct,
+            "pct": pct_change,
             "titles_this": ", ".join(titles_this) if titles_this else "",
             "titles_last": ", ".join(titles_last) if titles_last else "",
             "open_now": open_now_total,
@@ -1159,10 +1159,148 @@ def build_company_indicators_page(db_path: str) -> str:
         WHERE metric_month = ?
     """, (this_month,)).fetchone()[0] or 0
 
+    # ----------------------------
+    # Hiring delay summary tables (MOVED HERE: top of Company Indicators)
+    # ----------------------------
+
+    weeks3_for_tables = last_n_completed_weeks(today, 3)
+    week_ends = [w[1].isoformat() for w in weeks3_for_tables]
+
+    month_rows = conn.execute("""
+        SELECT employer_name, employer_norm, window_jobs, still_open_jobs, still_open_rate, window_start, window_end
+        FROM company_still_open_monthly
+        WHERE metric_month = ?
+    """, (this_month,)).fetchall()
+
+    month_candidates = []
+    for name, en, wjobs, so, rate, ws, we in month_rows:
+        wjobs = int(wjobs or 0)
+        so = int(so or 0)
+        rate = float(rate or 0.0)
+
+        if wjobs >= 3 and (so >= 5 or rate >= 0.5):
+            month_candidates.append({
+                "company": name,
+                "window": f"{ws} to {we}",
+                "window_jobs": wjobs,
+                "still_open": so,
+                "rate": rate
+            })
+
+    month_candidates.sort(key=lambda x: (x["still_open"], x["rate"]), reverse=True)
+    month_candidates = month_candidates[:30]
+
+    weekly_rows = []
+    if len(week_ends) == 3:
+        placeholders = ",".join(["?"] * 3)
+        weekly_rows = conn.execute(f"""
+            SELECT employer_name, employer_norm, week_end, window_jobs, still_open_jobs, still_open_rate
+            FROM company_still_open_weekly3
+            WHERE week_end IN ({placeholders})
+        """, week_ends).fetchall()
+
+    trend_candidates = []
+
+    by_company = {}
+    for name, en, wend, wjobs, so, rate in weekly_rows:
+        if en not in by_company:
+            by_company[en] = {"company": name, "points": {}}
+        by_company[en]["points"][wend] = {
+            "window_jobs": int(wjobs or 0),
+            "still_open": int(so or 0),
+            "rate": float(rate or 0.0),
+        }
+
+    if len(week_ends) == 3:
+        newest, mid, oldest = week_ends[0], week_ends[1], week_ends[2]
+
+        for en, obj in by_company.items():
+            pts = obj["points"]
+            if oldest not in pts or mid not in pts or newest not in pts:
+                continue
+
+            r0 = pts[oldest]["rate"]
+            r2 = pts[newest]["rate"]
+            delta = r2 - r0
+            avg_rate = (r0 + pts[mid]["rate"] + r2) / 3.0
+
+            if avg_rate >= 0.45 or delta >= 0.15:
+                trend_candidates.append({
+                    "company": obj["company"],
+                    "week_new": newest,
+                    "so_new": pts[newest]["still_open"],
+                    "w_new": pts[newest]["window_jobs"],
+                    "r_new": r2,
+                    "delta": delta,
+                    "avg_rate": avg_rate,
+                })
+
+    trend_candidates.sort(key=lambda x: (x["r_new"], x["delta"]), reverse=True)
+    trend_candidates = trend_candidates[:30]
+
+    def pct_fmt(x):
+        return f"{x*100:.1f}%"
+
     conn.close()
 
     body = f"""
       <h2>Company Indicators</h2>
+
+      <h3 style="margin-top:10px;">Companies with hiring delays</h3>
+      <p class="muted">
+        “Hiring delays” = postings first seen earlier that appear to still be open now
+        (same <code>job_id</code> overlap with current JSearch results).
+      </p>
+
+      <div class="two-col">
+
+        <div class="card">
+          <h3>Month snapshot — {this_month}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Window</th>
+                <th>Window jobs</th>
+                <th>Still open</th>
+                <th>Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {''.join([
+                f"<tr><td>{r['company']}</td><td>{r['window']}</td><td>{r['window_jobs']}</td><td>{r['still_open']}</td><td>{pct_fmt(r['rate'])}</td></tr>"
+                for r in month_candidates
+              ]) if month_candidates else "<tr><td colspan='5'>No flagged companies this month.</td></tr>"}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>3-week trend</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Newest week</th>
+                <th>Newest still open</th>
+                <th>Newest rate</th>
+                <th>Δ rate</th>
+                <th>Avg rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {''.join([
+                f"<tr><td>{t['company']}</td><td>{t['week_new']}</td><td>{t['so_new']} / {t['w_new']}</td><td>{pct_fmt(t['r_new'])}</td><td>{pct_fmt(t['delta'])}</td><td>{pct_fmt(t['avg_rate'])}</td></tr>"
+                for t in trend_candidates
+              ]) if trend_candidates else "<tr><td colspan='6'>No 3-week delay trends yet.</td></tr>"}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <hr style="margin:22px 0; border:none; border-top:1px solid #eee;" />
+
       <p class="muted">
         Comparison of unique postings captured in <b>{this_month}</b> vs <b>{last_month}</b>.
       </p>
@@ -1247,10 +1385,8 @@ def pick_week_range_with_fallback(conn: sqlite3.Connection, today: date) -> Tupl
         return start, end
 
     # Fallback: current week-to-date (Sun -> today)
-    cur_start, cur_end = sunday_to_saturday_range(today)
+    cur_start, _cur_end = sunday_to_saturday_range(today)
     return cur_start, today  # week-to-date
-
-
 
 
 def build_trends_page(db_path: str) -> str:
@@ -1263,175 +1399,6 @@ def build_trends_page(db_path: str) -> str:
         return html_shell("MoCo Hiring Monitor — Trends", "trends", meta, body)
 
     today = date.today()
-
-    # --- NEW: Hiring delays tables ---
-    this_month = today.strftime("%Y-%m")
-    weeks3 = last_n_completed_weeks(today, 3)  # newest first
-    week_ends = [w[1].isoformat() for w in weeks3]  # [newest, mid, oldest]
-
-    def slowdown_flag(window_jobs: int, still_open_jobs: int, still_open_rate: float) -> bool:
-        if window_jobs < 3:
-            return False
-        if still_open_jobs >= 5:
-            return True
-        if still_open_rate >= 0.50:
-            return True
-        return False
-
-    month_rows = conn.execute("""
-        SELECT employer_name, employer_norm, window_jobs, still_open_jobs, still_open_rate, window_start, window_end
-        FROM company_still_open_monthly
-        WHERE metric_month = ?
-    """, (this_month,)).fetchall()
-
-    month_candidates = []
-    for name, _en, wjobs, so, rate, ws, we in month_rows:
-        wjobs = int(wjobs or 0)
-        so = int(so or 0)
-        rate = float(rate or 0.0)
-        if slowdown_flag(wjobs, so, rate):
-            month_candidates.append({
-                "company": name or "",
-                "window_jobs": wjobs,
-                "still_open": so,
-                "rate": rate,
-                "window": f"{ws} to {we}"
-            })
-
-    month_candidates.sort(key=lambda x: (x["still_open"], x["rate"]), reverse=True)
-    month_candidates = month_candidates[:50]
-
-    weekly_rows = []
-    if len(week_ends) == 3:
-        placeholders = ",".join(["?"] * 3)
-        weekly_rows = conn.execute(f"""
-            SELECT employer_name, employer_norm, week_end, window_jobs, still_open_jobs, still_open_rate
-            FROM company_still_open_weekly3
-            WHERE week_end IN ({placeholders})
-        """, week_ends).fetchall()
-
-    by_company: Dict[str, Dict[str, Any]] = {}
-    for name, en, wend, wjobs, so, rate in weekly_rows:
-        en = en or ""
-        if en not in by_company:
-            by_company[en] = {"company": name or "", "points": {}}
-        by_company[en]["points"][wend] = {
-            "window_jobs": int(wjobs or 0),
-            "still_open": int(so or 0),
-            "rate": float(rate or 0.0),
-        }
-
-    trend_candidates = []
-    if len(week_ends) == 3:
-        newest, mid, oldest = week_ends[0], week_ends[1], week_ends[2]
-        for _en, obj in by_company.items():
-            pts = obj["points"]
-            if oldest not in pts or mid not in pts or newest not in pts:
-                continue
-
-            r0 = pts[oldest]["rate"]
-            r1 = pts[mid]["rate"]
-            r2 = pts[newest]["rate"]
-            so_tot = pts[oldest]["still_open"] + pts[mid]["still_open"] + pts[newest]["still_open"]
-            w_tot = pts[oldest]["window_jobs"] + pts[mid]["window_jobs"] + pts[newest]["window_jobs"]
-
-            if w_tot < 6:
-                continue
-
-            avg_rate = (r0 + r1 + r2) / 3.0
-            delta = r2 - r0
-
-            is_flag = (avg_rate >= 0.45 and so_tot >= 6) or (delta >= 0.15 and so_tot >= 4) or (r2 >= 0.60 and pts[newest]["still_open"] >= 3)
-            if is_flag:
-                trend_candidates.append({
-                    "company": obj["company"],
-                    "avg_rate": avg_rate,
-                    "delta": delta,
-                    "so_tot": so_tot,
-                    "w_tot": w_tot,
-                    "r_old": r0,
-                    "r_mid": r1,
-                    "r_new": r2,
-                    "so_new": pts[newest]["still_open"],
-                    "w_new": pts[newest]["window_jobs"],
-                    "week_old": oldest,
-                    "week_mid": mid,
-                    "week_new": newest,
-                })
-
-    trend_candidates.sort(key=lambda x: (x["so_new"], x["delta"], x["avg_rate"]), reverse=True)
-    trend_candidates = trend_candidates[:50]
-
-    def pct(x: float) -> str:
-        return f"{x*100:.1f}%"
-
-    hiring_tables = f"""
-  <h2>Trends</h2>
-
-  <h3 style="margin-top:10px;">Companies with hiring delays</h3>
-  <p class="muted">
-    “Hiring delays” = postings first seen earlier that appear to still be open now (same <code>job_id</code> overlap with current JSearch results).
-    Computed for tracked companies (top N by monthly captured postings).
-  </p>
-
-  <div class="two-col">
-    <div class="card">
-      <h3>Month snapshot — {this_month}</h3>
-      <div class="small muted">Window shown is 30–45 days ago relative to today.</div>
-      <table style="margin-top:10px;">
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th>Window</th>
-            <th>Window jobs</th>
-            <th>Still open</th>
-            <th>Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {''.join([
-            f"<tr><td>{r['company']}</td><td>{r['window']}</td><td>{r['window_jobs']}</td><td>{r['still_open']}</td><td>{pct(r['rate'])}</td></tr>"
-            for r in month_candidates
-          ]) if month_candidates else "<tr><td colspan='5'>No hiring-delay companies flagged yet for this month (or metrics not computed yet).</td></tr>"}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h3>3-week trend (completed weeks)</h3>
-      <div class="small muted">
-        Weeks end on Saturday. Shows rate change from oldest → newest week.
-      </div>
-      <table style="margin-top:10px;">
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th>Newest week end</th>
-            <th>Newest still open</th>
-            <th>Newest rate</th>
-            <th>Δ rate (old→new)</th>
-            <th>Avg rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {''.join([
-            f"<tr>"
-            f"<td>{t['company']}</td>"
-            f"<td>{t['week_new']}</td>"
-            f"<td>{t['so_new']} / {t['w_new']}</td>"
-            f"<td>{pct(t['r_new'])}</td>"
-            f"<td>{pct(t['delta'])}</td>"
-            f"<td>{pct(t['avg_rate'])}</td>"
-            f"</tr>"
-            for t in trend_candidates
-          ]) if trend_candidates else "<tr><td colspan='6'>No 3-week hiring-delay trends flagged yet (or not enough weekly history).</td></tr>"}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <hr style="margin:22px 0; border:none; border-top:1px solid #eee;" />
-"""
 
     # --- existing trends calculations ---
     months = []
@@ -1502,7 +1469,9 @@ def build_trends_page(db_path: str) -> str:
     req_cols = req_tags
     title_cols = list(title_keywords.keys())
 
-    body = hiring_tables + f"""
+    body = f"""
+      <h2>Trends</h2>
+
       <p class="muted">
         Monthly counts of captured <b>unique job IDs</b>. Use the dropdown to change the chart variable.
         Title keyword counts are based on <code>job_title</code> contains-match.
