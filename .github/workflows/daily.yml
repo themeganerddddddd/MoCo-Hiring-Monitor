@@ -2,7 +2,7 @@ name: Daily MoCo Hiring Monitor
 
 on:
   schedule:
-    - cron: "30 17 * * *"  # 10:15 UTC daily (5:15am ET)
+    - cron: "15 10 * * *"  # 10:15 UTC daily (5:15am ET)
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,13 @@ jobs:
         run: |
           python monitor.py daily
 
+      # ✅ DAILY retag so Search + sector tags stay correct for SQL LIKE matching
+      - name: Retag fields in DB (last 365 days)
+        env:
+          DB_PATH: ./data/moco_jobs.sqlite
+        run: |
+          python -c "import os; from monitor import retag_fields_in_db; retag_fields_in_db(os.getenv('DB_PATH','./data/moco_jobs.sqlite'), 365)"
+
       - name: Run monthly report for current month
         env:
           DB_PATH: ./data/moco_jobs.sqlite
@@ -42,6 +49,7 @@ jobs:
         env:
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
+          DB_PATH: ./data/moco_jobs.sqlite
         run: |
           python dashboard.py
 
