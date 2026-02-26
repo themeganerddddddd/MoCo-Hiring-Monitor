@@ -4,10 +4,13 @@ import csv
 import json
 import sqlite3
 import re
+import time
 from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Set
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 OUTPUT_DIR = "./outputs"
 DOCS_DIR = "./docs"
@@ -61,36 +64,38 @@ def link(title, url):
 
 def sunday_to_saturday_range(d: date) -> Tuple[date, date]:
     # Week starts Sunday, ends Saturday
-    # Python weekday: Mon=0 ... Sun=6
     days_since_sunday = (d.weekday() + 1) % 7
     start = d - timedelta(days=days_since_sunday)
     end = start + timedelta(days=6)
     return start, end
 
 
-def last_completed_week_range_utc(today: Optional[date] = None) -> Tuple[date, date]:
+def most_recent_completed_week(today: date) -> Tuple[date, date]:
     """
-    Returns the most recent FULLY COMPLETED Sun-Sat week.
-
-    We define a completed week as one whose Saturday is strictly before "today"
-    unless today is Sunday (then yesterday was Saturday and that week is completed).
-
-    Implementation: find the most recent Saturday strictly before today (or yesterday if Sunday),
-    then return the Sun-Sat range containing that Saturday.
+    Returns the most recent *completed* Sunday->Saturday week.
+    - If today is Saturday, we use the week that ended last Saturday (7 days ago).
+    - Otherwise we use the most recent Saturday before today.
     """
-    if today is None:
-        today = date.today()  # runner date (UTC-ish on GitHub-hosted Linux)
+    # weekday: Mon=0 ... Sat=5 ... Sun=6
+    days_since_saturday = (today.weekday() - 5) % 7
+    if days_since_saturday == 0:
+        days_since_saturday = 7
+    end = today - timedelta(days=days_since_saturday)
+    start = end - timedelta(days=6)
+    return start, end
 
-    # weekday: Mon=0 ... Sun=6, Sat=5
-    wd = today.weekday()
-    delta = (wd - 5) % 7  # days since last Saturday (0 if Saturday, 1 if Sunday, 2 if Monday, ...)
-    if delta == 0:
-        # If it's Saturday (your run is early), the week hasn't "fully completed" yet,
-        # so use the previous Saturday (7 days ago).
-        delta = 7
 
-    last_saturday = today - timedelta(days=delta)
-    return sunday_to_saturday_range(last_saturday)
+def last_n_completed_weeks(today: date, n: int = 3) -> List[Tuple[date, date]]:
+    """
+    Returns last n completed Sun->Sat week ranges, newest first.
+    """
+    out: List[Tuple[date, date]] = []
+    start, end = most_recent_completed_week(today)
+    for _ in range(n):
+        out.append((start, end))
+        end = start - timedelta(days=1)
+        start = end - timedelta(days=6)
+    return out
 
 
 def month_start_end(month_yyyy_mm: str) -> Tuple[date, date]:
@@ -103,14 +108,10 @@ def month_start_end(month_yyyy_mm: str) -> Tuple[date, date]:
 
 
 # ----------------------------
-# Normalization + weekly-only exclusions (FIX)
+# Normalization + weekly-only exclusions
 # ----------------------------
 
 def normalize_company(name: str) -> str:
-    """
-    Matches monitor.py normalization closely, so exclusions work even if the stored
-    employer_name varies (punctuation, suffixes, etc).
-    """
     if not name:
         return ""
     s = name.strip().lower()
@@ -221,8 +222,15 @@ def html_shell(title: str, active: str, meta_line_html: str, body_html: str):
 
 
 # ----------------------------
-# “Coverage stats” for tabs
+# Coverage stats
 # ----------------------------
+
+def read_latest_daily_run_date() -> Optional[str]:
+    latest_daily = find_latest("new_companies_")
+    if not latest_daily:
+        return None
+    return latest_daily.replace("new_companies_", "").replace(".csv", "")
+
 
 def read_latest_run_stats_for_date(db_path: str, run_date: str) -> Optional[Dict[str, Any]]:
     conn = connect_db(db_path)
@@ -282,18 +290,11 @@ def sum_run_stats_over_range(db_path: str, start_date: date, end_date_inclusive:
 def sector_week_stats(db_path: str, field_tag: str, start: date, end: date) -> Dict[str, Any]:
     conn = connect_db(db_path)
     if not conn:
-        return {
-            "jobs_scanned_count": 0,
-            "jobs_in_moco_count": 0,
-            "new_jobs_count": 0,
-            "new_companies_count": 0,
-            "started_utc": "",
-            "finished_utc": "",
-        }
+        return {"jobs_scanned_count": 0, "jobs_in_moco_count": 0, "new_jobs_count": 0, "new_companies_count": 0,
+                "started_utc": "", "finished_utc": ""}
 
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
-
     like_tag = f"%,{field_tag},%"
 
     jobs_captured = conn.execute("""
@@ -370,6 +371,258 @@ def render_stats_grid(stats: Optional[Dict[str, Any]], extra_note: Optional[str]
   </div>
   {note_html}
 """
+
+
+# ----------------------------
+# Requests: retry + backoff (for JSearch)
+# ----------------------------
+
+def build_retry_session() -> requests.Session:
+    retry = Retry(
+        total=6,
+        connect=6,
+        read=6,
+        backoff_factor=1.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    s = requests.Session()
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
+
+
+def _is_job_in_moco_light(job: Dict[str, Any]) -> bool:
+    city = str(job.get("job_city") or "").lower()
+    state = str(job.get("job_state") or "").lower()
+    loc = str(job.get("job_location") or "").lower()
+
+    moco_cities = [
+        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
+        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
+    ]
+
+    if state == "md" and any(c in city for c in moco_cities):
+        return True
+    if "montgomery county" in loc and "md" in loc:
+        return True
+    return False
+
+
+def fetch_open_job_ids_for_company(
+    company_name: str,
+    rapidapi_key: str,
+    rapidapi_host: str,
+    *,
+    session: requests.Session,
+    max_pages: int = 6,
+    per_call_sleep_s: float = 0.25,
+    connect_timeout_s: int = 10,
+    read_timeout_s: int = 90,
+) -> Set[str]:
+    """
+    "Open now" approximation:
+      - query = company_name
+      - pulls multiple pages
+      - filters to exact normalized employer match
+      - filters to MoCo-ish location
+      - returns set(job_id)
+    """
+    if not rapidapi_key:
+        return set()
+
+    headers = {"X-RapidAPI-Key": rapidapi_key, "X-RapidAPI-Host": rapidapi_host}
+    target_norm = normalize_company(company_name)
+
+    out: Set[str] = set()
+    seen_any = False
+
+    for page in range(1, max_pages + 1):
+        time.sleep(per_call_sleep_s)
+
+        params = {
+            "query": company_name,
+            "page": str(page),
+            "num_pages": "1",
+            "country": "us",
+        }
+
+        try:
+            r = session.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=(connect_timeout_s, read_timeout_s))
+            r.raise_for_status()
+            payload = r.json()
+        except Exception:
+            break
+
+        data = payload.get("data") or []
+        if not isinstance(data, list) or not data:
+            if seen_any:
+                break
+            else:
+                continue
+
+        seen_any = True
+
+        page_added = 0
+        for j in data:
+            emp = str(j.get("employer_name") or "")
+            if normalize_company(emp) != target_norm:
+                continue
+            if not _is_job_in_moco_light(j):
+                continue
+            jid = str(j.get("job_id") or "").strip()
+            if jid:
+                if jid not in out:
+                    out.add(jid)
+                    page_added += 1
+
+        if page_added == 0 and page >= 2:
+            break
+
+    return out
+
+
+# ----------------------------
+# Persisted month-over-month metrics table
+# ----------------------------
+
+def ensure_metrics_table(conn: sqlite3.Connection):
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS company_still_open_monthly (
+        metric_month TEXT NOT NULL,
+        employer_norm TEXT NOT NULL,
+        employer_name TEXT DEFAULT '',
+        window_start TEXT NOT NULL,
+        window_end TEXT NOT NULL,
+        window_jobs INTEGER DEFAULT 0,
+        open_now_jobs INTEGER DEFAULT 0,
+        still_open_jobs INTEGER DEFAULT 0,
+        still_open_rate REAL DEFAULT 0.0,
+        computed_utc TEXT DEFAULT '',
+        PRIMARY KEY (metric_month, employer_norm)
+    );
+    """)
+    conn.commit()
+
+
+def upsert_company_still_open_monthly(
+    conn: sqlite3.Connection,
+    metric_month: str,
+    employer_norm: str,
+    employer_name: str,
+    window_start: date,
+    window_end: date,
+    window_jobs: int,
+    open_now_jobs: int,
+    still_open_jobs: int,
+):
+    rate = 0.0
+    if window_jobs > 0:
+        rate = still_open_jobs / float(window_jobs)
+
+    conn.execute("""
+    INSERT INTO company_still_open_monthly (
+        metric_month, employer_norm, employer_name,
+        window_start, window_end,
+        window_jobs, open_now_jobs, still_open_jobs, still_open_rate,
+        computed_utc
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(metric_month, employer_norm) DO UPDATE SET
+        employer_name = excluded.employer_name,
+        window_start = excluded.window_start,
+        window_end = excluded.window_end,
+        window_jobs = excluded.window_jobs,
+        open_now_jobs = excluded.open_now_jobs,
+        still_open_jobs = excluded.still_open_jobs,
+        still_open_rate = excluded.still_open_rate,
+        computed_utc = excluded.computed_utc
+    """, (
+        metric_month, employer_norm, employer_name,
+        window_start.isoformat(), window_end.isoformat(),
+        int(window_jobs), int(open_now_jobs), int(still_open_jobs), float(rate),
+        utc_now_iso(),
+    ))
+    conn.commit()
+
+
+def get_window_job_ids(conn: sqlite3.Connection, employer_norm: str, start_d: date, end_d_inclusive: date) -> Set[str]:
+    start_s = start_d.isoformat()
+    end_excl = (end_d_inclusive + timedelta(days=1)).isoformat()
+    rows = conn.execute("""
+        SELECT DISTINCT job_id
+        FROM jobs
+        WHERE employer_norm = ?
+          AND first_seen_run_date >= ?
+          AND first_seen_run_date < ?
+          AND job_id IS NOT NULL AND TRIM(job_id) <> ''
+    """, (employer_norm, start_s, end_excl)).fetchall()
+    return {str(r[0]) for r in rows if r and r[0]}
+
+
+# ----------------------------
+# NEW: Weekly (3-week) persisted metrics table
+# ----------------------------
+
+def ensure_weekly3_table(conn: sqlite3.Connection):
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS company_still_open_weekly3 (
+        week_end TEXT NOT NULL,
+        employer_norm TEXT NOT NULL,
+        employer_name TEXT DEFAULT '',
+        window_start TEXT NOT NULL,
+        window_end TEXT NOT NULL,
+        window_jobs INTEGER DEFAULT 0,
+        open_now_jobs INTEGER DEFAULT 0,
+        still_open_jobs INTEGER DEFAULT 0,
+        still_open_rate REAL DEFAULT 0.0,
+        computed_utc TEXT DEFAULT '',
+        PRIMARY KEY (week_end, employer_norm)
+    );
+    """)
+    conn.commit()
+
+
+def upsert_company_still_open_weekly3(
+    conn: sqlite3.Connection,
+    week_end: date,
+    employer_norm: str,
+    employer_name: str,
+    window_start: date,
+    window_end: date,
+    window_jobs: int,
+    open_now_jobs: int,
+    still_open_jobs: int,
+):
+    rate = 0.0
+    if window_jobs > 0:
+        rate = still_open_jobs / float(window_jobs)
+
+    conn.execute("""
+    INSERT INTO company_still_open_weekly3 (
+        week_end, employer_norm, employer_name,
+        window_start, window_end,
+        window_jobs, open_now_jobs, still_open_jobs, still_open_rate,
+        computed_utc
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(week_end, employer_norm) DO UPDATE SET
+        employer_name = excluded.employer_name,
+        window_start = excluded.window_start,
+        window_end = excluded.window_end,
+        window_jobs = excluded.window_jobs,
+        open_now_jobs = excluded.open_now_jobs,
+        still_open_jobs = excluded.still_open_jobs,
+        still_open_rate = excluded.still_open_rate,
+        computed_utc = excluded.computed_utc
+    """, (
+        week_end.isoformat(), employer_norm, employer_name,
+        window_start.isoformat(), window_end.isoformat(),
+        int(window_jobs), int(open_now_jobs), int(still_open_jobs), float(rate),
+        utc_now_iso(),
+    ))
+    conn.commit()
 
 
 # ----------------------------
@@ -488,8 +741,8 @@ def build_weekly_page(db_path: str) -> str:
         body = "<h2>Weekly</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell("MoCo Hiring Monitor — Weekly", "weekly", meta, body)
 
-    # ✅ MOST RECENT FULL WEEK (Sun–Sat), not the current partial week
-    start, end = last_completed_week_range_utc()
+    today = date.today()
+    start, end = most_recent_completed_week(today)
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
@@ -556,11 +809,11 @@ def build_weekly_page(db_path: str) -> str:
 
     body += render_stats_grid(
         week_stats,
-        extra_note="Weekly tab stats are sums of the daily run stats over the FULLY COMPLETED week (true API-returned counts)."
+        extra_note="Weekly tab stats are sums of daily run stats over the most recent completed week (true API-returned counts)."
     )
 
     body += """
-      <h3 style="margin-top:22px;">New companies detected (this week)</h3>
+      <h3 style="margin-top:22px;">New companies detected (week)</h3>
       <table>
         <thead>
           <tr>
@@ -596,12 +849,12 @@ def build_weekly_page(db_path: str) -> str:
             body += f"<td>{reqs}</td>"
             body += "</tr>"
     else:
-        body += "<tr><td colspan='6'>No new companies in that completed week.</td></tr>"
+        body += "<tr><td colspan='6'>No new companies in the most recent completed week.</td></tr>"
 
     body += "</tbody></table>"
 
     body += """
-      <h3 style="margin-top:22px;">Hiring companies (this week)</h3>
+      <h3 style="margin-top:22px;">Hiring companies (week)</h3>
 
       <table>
         <thead><tr><th>Rank</th><th>Company</th><th>Unique postings captured</th></tr></thead>
@@ -611,7 +864,7 @@ def build_weekly_page(db_path: str) -> str:
         for i, (company, cnt) in enumerate(top, start=1):
             body += f"<tr><td>{i}</td><td>{company}</td><td>{cnt}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No data for that completed week.</td></tr>"
+        body += "<tr><td colspan='3'>No data for the most recent completed week.</td></tr>"
     body += "</tbody></table>"
 
     return html_shell("MoCo Hiring Monitor — Weekly", "weekly", meta, body)
@@ -626,8 +879,8 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         body = f"<h2>{title}</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell(f"MoCo Hiring Monitor — {title}", active, meta, body)
 
-    # ✅ MOST RECENT FULL WEEK (Sun–Sat)
-    start, end = last_completed_week_range_utc()
+    today = date.today()
+    start, end = most_recent_completed_week(today)
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
@@ -685,11 +938,11 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
 
     body += render_stats_grid(
         stats,
-        extra_note="Sector tab stats count captured jobs tagged to this sector during the FULLY COMPLETED week."
+        extra_note="Sector tab stats count captured jobs tagged to this sector during the most recent completed week."
     )
 
     body += """
-      <h3>Top hiring companies (sector, this week)</h3>
+      <h3>Top hiring companies (sector, week)</h3>
       <table>
         <thead><tr><th>Rank</th><th>Company</th><th>Unique postings captured</th></tr></thead>
         <tbody>
@@ -698,11 +951,11 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         for i, (company, _norm, cnt) in enumerate(top_cos, start=1):
             body += f"<tr><td>{i}</td><td>{company}</td><td>{cnt}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No sector-tagged jobs in that completed week.</td></tr>"
+        body += "<tr><td colspan='3'>No sector-tagged jobs in the most recent completed week.</td></tr>"
     body += "</tbody></table>"
 
     body += """
-      <h3 style="margin-top:22px;">New companies (sector, this week)</h3>
+      <h3 style="margin-top:22px;">New companies (sector, week)</h3>
       <table>
         <thead><tr><th>Company</th><th>First seen</th><th>Verified by Places</th></tr></thead>
         <tbody>
@@ -714,11 +967,11 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
                     ("Verified" if verified else "Unverified") + "</span>"
             body += f"<tr><td>{company}</td><td>{first_seen}</td><td>{badge}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No new sector companies in that completed week.</td></tr>"
+        body += "<tr><td colspan='3'>No new sector companies in the most recent completed week.</td></tr>"
     body += "</tbody></table>"
 
     body += """
-      <h3 style="margin-top:22px;">Jobs captured (sector, this week)</h3>
+      <h3 style="margin-top:22px;">Jobs captured (sector, week)</h3>
       <table>
         <thead><tr><th>Date</th><th>Company</th><th>Title</th><th>Salary</th><th>Requirements</th></tr></thead>
         <tbody>
@@ -727,79 +980,15 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         for d, company, title_txt, url, salary, reqs, _norm in jobs:
             body += f"<tr><td>{d}</td><td>{company}</td><td>{link(title_txt, url)}</td><td>{salary or ''}</td><td>{reqs or ''}</td></tr>"
     else:
-        body += "<tr><td colspan='5'>No jobs for that sector in that completed week.</td></tr>"
+        body += "<tr><td colspan='5'>No jobs for this sector in the most recent completed week.</td></tr>"
     body += "</tbody></table>"
 
     return html_shell(f"MoCo Hiring Monitor — {title}", active, meta, body)
 
 
 # ----------------------------
-# Company indicators + "hard to fill" proxy (unchanged)
+# Company indicators + STILL-OPEN metric (new proxy)
 # ----------------------------
-
-def _normalize_company_simple(name: str) -> str:
-    if not name:
-        return ""
-    s = name.strip().lower()
-    s = "".join(ch for ch in s if ch.isalnum() or ch in " &-")
-    s = " ".join(s.split())
-    for suf in [" inc", " llc", " ltd", " co", " corporation", " corp", " company", " incorporated", " limited"]:
-        if s.endswith(suf):
-            s = s[: -len(suf)].strip()
-    return s
-
-
-def _is_job_in_moco_light(job: Dict[str, Any]) -> bool:
-    city = str(job.get("job_city") or "").lower()
-    state = str(job.get("job_state") or "").lower()
-    loc = str(job.get("job_location") or "").lower()
-
-    moco_cities = [
-        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
-        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
-    ]
-
-    if state == "md" and any(c in city for c in moco_cities):
-        return True
-    if "montgomery county" in loc and "md" in loc:
-        return True
-    return False
-
-
-def jsearch_open_jobs_last_month_for_company(company_name: str, rapidapi_key: str, rapidapi_host: str) -> Optional[int]:
-    if not rapidapi_key:
-        return None
-    headers = {"X-RapidAPI-Key": rapidapi_key, "X-RapidAPI-Host": rapidapi_host}
-    params = {
-        "query": company_name,
-        "page": "1",
-        "num_pages": "1",
-        "date_posted": "month",
-        "country": "us",
-    }
-    try:
-        r = requests.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=30)
-        r.raise_for_status()
-        payload = r.json()
-        data = payload.get("data") or []
-        if not isinstance(data, list):
-            return 0
-
-        target_norm = _normalize_company_simple(company_name)
-        seen = set()
-        for j in data:
-            emp = str(j.get("employer_name") or "")
-            if _normalize_company_simple(emp) != target_norm:
-                continue
-            if not _is_job_in_moco_light(j):
-                continue
-            jid = str(j.get("job_id") or "").strip()
-            if jid:
-                seen.add(jid)
-        return len(seen)
-    except Exception:
-        return None
-
 
 def build_company_indicators_page(db_path: str) -> str:
     now = utc_now_iso()
@@ -810,8 +999,12 @@ def build_company_indicators_page(db_path: str) -> str:
         body = "<h2>Company Indicators</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell("MoCo Hiring Monitor — Company Indicators", "indicators", meta, body)
 
+    ensure_metrics_table(conn)
+    ensure_weekly3_table(conn)
+
     rapidapi_key = os.getenv("RAPIDAPI_KEY", "").strip()
     rapidapi_host = os.getenv("RAPIDAPI_HOST", "jsearch.p.rapidapi.com").strip()
+    session = build_retry_session()
 
     today = date.today()
     this_month = today.strftime("%Y-%m")
@@ -822,105 +1015,182 @@ def build_company_indicators_page(db_path: str) -> str:
     this_start, this_end = month_start_end(this_month)
     last_start, last_end = month_start_end(last_month)
 
+    # window for "still open now" check (30-45 days ago)
+    window_end = today - timedelta(days=30)
+    window_start = today - timedelta(days=45)
+
+    # simple exclusions for indicators page (keep if you want)
     EXCLUDE = set([
         "uber", "uber technologies", "walmart", "doordash", "lyft"
     ])
 
-    def norm(s: str) -> str:
+    def norm_simple(s: str) -> str:
         return (s or "").strip().lower()
 
     this_counts = conn.execute("""
-        SELECT employer_name, COUNT(DISTINCT job_id) AS cnt
+        SELECT employer_name, employer_norm, COUNT(DISTINCT job_id) AS cnt
         FROM jobs
         WHERE first_seen_run_date >= ?
           AND first_seen_run_date < ?
           AND employer_name IS NOT NULL AND TRIM(employer_name) <> ''
-        GROUP BY employer_name
+        GROUP BY employer_norm
     """, (this_start.isoformat(), this_end.isoformat())).fetchall()
 
     last_counts = conn.execute("""
-        SELECT employer_name, COUNT(DISTINCT job_id) AS cnt
+        SELECT employer_name, employer_norm, COUNT(DISTINCT job_id) AS cnt
         FROM jobs
         WHERE first_seen_run_date >= ?
           AND first_seen_run_date < ?
           AND employer_name IS NOT NULL AND TRIM(employer_name) <> ''
-        GROUP BY employer_name
+        GROUP BY employer_norm
     """, (last_start.isoformat(), last_end.isoformat())).fetchall()
 
-    this_map = {name: int(cnt) for name, cnt in this_counts if norm(name) not in EXCLUDE}
-    last_map = {name: int(cnt) for name, cnt in last_counts if norm(name) not in EXCLUDE}
+    # maps by norm (stable)
+    this_map = {}
+    for name, en, cnt in this_counts:
+        if norm_simple(name) in EXCLUDE:
+            continue
+        this_map[en] = {"name": name, "cnt": int(cnt or 0)}
 
-    companies_sorted = sorted(this_map.items(), key=lambda x: x[1], reverse=True)[:50]
+    last_map = {}
+    for name, en, cnt in last_counts:
+        if norm_simple(name) in EXCLUDE:
+            continue
+        last_map[en] = int(cnt or 0)
 
-    def top_titles_for(company: str, start_d: date, end_d: date) -> List[str]:
+    # top N by this month captured postings
+    TOP_N = int(os.getenv("INDICATORS_TOP_N", "50"))
+    companies_sorted = sorted(this_map.items(), key=lambda x: x[1]["cnt"], reverse=True)[:TOP_N]
+
+    def top_titles_for_norm(employer_norm: str, start_d: date, end_d: date) -> List[str]:
         rows = conn.execute("""
             SELECT job_title, COUNT(*) AS c
             FROM jobs
-            WHERE employer_name = ?
+            WHERE employer_norm = ?
               AND first_seen_run_date >= ?
               AND first_seen_run_date < ?
               AND job_title IS NOT NULL AND TRIM(job_title) <> ''
             GROUP BY job_title
             ORDER BY c DESC
             LIMIT 3
-        """, (company, start_d.isoformat(), end_d.isoformat())).fetchall()
+        """, (employer_norm, start_d.isoformat(), end_d.isoformat())).fetchall()
         return [r[0] for r in rows]
 
     table_rows = []
-    for company, this_cnt in companies_sorted:
-        last_cnt = last_map.get(company)
-        if last_cnt is None or last_cnt == 0:
-            pct = "NA"
-        else:
+
+    weeks3 = last_n_completed_weeks(today, 3)  # newest first
+
+    for employer_norm, obj in companies_sorted:
+        company = obj["name"]
+        this_cnt = obj["cnt"]
+        last_cnt = last_map.get(employer_norm, 0)
+
+        pct = "NA"
+        if last_cnt and last_cnt > 0:
             pct = f"{((this_cnt - last_cnt) / last_cnt) * 100:.1f}%"
 
-        titles_this = top_titles_for(company, this_start, this_end)
-        titles_last = top_titles_for(company, last_start, last_end)
+        titles_this = top_titles_for_norm(employer_norm, this_start, this_end)
+        titles_last = top_titles_for_norm(employer_norm, last_start, last_end)
 
-        open_jobs_last_month = jsearch_open_jobs_last_month_for_company(company, rapidapi_key, rapidapi_host) if rapidapi_key else None
-        hard_to_fill = None
-        if isinstance(open_jobs_last_month, int):
-            hard_to_fill = max(0, open_jobs_last_month - this_cnt)
+        # --- still-open metric ---
+        window_ids = get_window_job_ids(conn, employer_norm, window_start, window_end)
+        open_now_ids = fetch_open_job_ids_for_company(
+            company,
+            rapidapi_key,
+            rapidapi_host,
+            session=session,
+            max_pages=6,
+            per_call_sleep_s=0.25,
+            connect_timeout_s=10,
+            read_timeout_s=90,
+        ) if rapidapi_key else set()
+
+        still_open = window_ids.intersection(open_now_ids)
+        still_open_count = len(still_open)
+        window_total = len(window_ids)
+        open_now_total = len(open_now_ids)
+        still_open_rate = (still_open_count / window_total) if window_total > 0 else 0.0
+
+        # persist month snapshot (updates daily within month)
+        upsert_company_still_open_monthly(
+            conn,
+            metric_month=this_month,
+            employer_norm=employer_norm,
+            employer_name=company,
+            window_start=window_start,
+            window_end=window_end,
+            window_jobs=window_total,
+            open_now_jobs=open_now_total,
+            still_open_jobs=still_open_count,
+        )
+
+        # persist last 3 completed week snapshots (updates daily)
+        for w_start, w_end in weeks3:
+            w_ids = get_window_job_ids(conn, employer_norm, w_start, w_end)
+            w_still_open = w_ids.intersection(open_now_ids)
+            upsert_company_still_open_weekly3(
+                conn,
+                week_end=w_end,
+                employer_norm=employer_norm,
+                employer_name=company,
+                window_start=w_start,
+                window_end=w_end,
+                window_jobs=len(w_ids),
+                open_now_jobs=open_now_total,
+                still_open_jobs=len(w_still_open),
+            )
 
         table_rows.append({
             "company": company,
             "this_cnt": this_cnt,
-            "last_cnt": last_cnt if last_cnt is not None else "NA",
+            "last_cnt": last_cnt if last_cnt else "NA",
             "pct": pct,
             "titles_this": ", ".join(titles_this) if titles_this else "",
             "titles_last": ", ".join(titles_last) if titles_last else "",
-            "open_jobs_last_month": open_jobs_last_month if open_jobs_last_month is not None else "NA",
-            "hard_to_fill": hard_to_fill if hard_to_fill is not None else "NA",
+            "open_now": open_now_total,
+            "window_total": window_total,
+            "still_open": still_open_count,
+            "still_open_rate": f"{still_open_rate*100:.1f}%" if window_total > 0 else "NA",
         })
 
-    conn.close()
+    persisted_cnt = conn.execute("""
+        SELECT COUNT(*)
+        FROM company_still_open_monthly
+        WHERE metric_month = ?
+    """, (this_month,)).fetchone()[0] or 0
 
-    note = ""
+    conn.close()
 
     body = f"""
       <h2>Company Indicators</h2>
       <p class="muted">
         Comparison of unique postings captured in <b>{this_month}</b> vs <b>{last_month}</b>.
-        Exclusions are applied for a few high-volume retail/platform employers.
       </p>
 
-      <div class="hint small">{note}</div>
+      <div class="hint small">
+        <b>Hard-to-fill proxy (updated):</b><br/>
+        For each company, we take job IDs captured <b>{window_start.isoformat()}</b> to <b>{window_end.isoformat()}</b> (30–45 days ago),
+        then query JSearch for the company’s open jobs “now” and count the overlap by <code>job_id</code>.<br/>
+        Saved to DB table: <code>company_still_open_monthly</code> (rows this month so far: <b>{persisted_cnt}</b>).
+      </div>
 
       <table>
         <thead>
           <tr>
             <th>Company</th>
-            <th>{this_month} unique postings</th>
-            <th>{last_month} unique postings</th>
+            <th>{this_month} unique postings (captured)</th>
+            <th>{last_month} unique postings (captured)</th>
             <th>% change</th>
             <th>Top titles ({this_month})</th>
             <th>Top titles ({last_month})</th>
-            <th>Open jobs (last month, JSearch)</th>
-            <th>Hard-to-fill proxy</th>
+            <th>Jobs captured 30 – 45d ago</th>
+            <th>Jobs Still Open 30 - 45 days later (overlap)</th>
+            <th>Jobs Still Open rate</th>
           </tr>
         </thead>
         <tbody>
     """
+
     if table_rows:
         for r in table_rows:
             body += (
@@ -931,26 +1201,32 @@ def build_company_indicators_page(db_path: str) -> str:
                 f"<td>{r['pct']}</td>"
                 f"<td>{r['titles_this']}</td>"
                 f"<td>{r['titles_last']}</td>"
-                f"<td>{r['open_jobs_last_month']}</td>"
-                f"<td>{r['hard_to_fill']}</td>"
+                f"<td>{r['window_total']}</td>"
+                f"<td>{r['still_open']}</td>"
+                f"<td>{r['still_open_rate']}</td>"
                 "</tr>"
             )
     else:
-        body += "<tr><td colspan='8'>No data for this month yet.</td></tr>"
+        body += "<tr><td colspan='10'>No data for this month yet.</td></tr>"
 
     body += """
         </tbody>
       </table>
 
       <div class="hint small">
-        “Hard-to-fill proxy” = max(0, open jobs still showing for last month − new jobs captured this month). It’s a rough signal, not proof.
+        Notes:
+        <ul>
+          <li>This measures “same posting still open” (same <code>job_id</code>). Re-posted roles with new IDs won’t count as still-open.</li>
+          <li>“Open jobs now” is approximate; large employers may require more paging to fully capture.</li>
+        </ul>
       </div>
     """
+
     return html_shell("MoCo Hiring Monitor — Company Indicators", "indicators", meta, body)
 
 
 # ----------------------------
-# Trends + Search (as you provided)
+# Trends + Search
 # ----------------------------
 
 def build_trends_page(db_path: str) -> str:
@@ -963,6 +1239,177 @@ def build_trends_page(db_path: str) -> str:
         return html_shell("MoCo Hiring Monitor — Trends", "trends", meta, body)
 
     today = date.today()
+
+    # --- NEW: Hiring delays tables ---
+    this_month = today.strftime("%Y-%m")
+    weeks3 = last_n_completed_weeks(today, 3)  # newest first
+    week_ends = [w[1].isoformat() for w in weeks3]  # [newest, mid, oldest]
+
+    def slowdown_flag(window_jobs: int, still_open_jobs: int, still_open_rate: float) -> bool:
+        if window_jobs < 3:
+            return False
+        if still_open_jobs >= 5:
+            return True
+        if still_open_rate >= 0.50:
+            return True
+        return False
+
+    month_rows = conn.execute("""
+        SELECT employer_name, employer_norm, window_jobs, still_open_jobs, still_open_rate, window_start, window_end
+        FROM company_still_open_monthly
+        WHERE metric_month = ?
+    """, (this_month,)).fetchall()
+
+    month_candidates = []
+    for name, _en, wjobs, so, rate, ws, we in month_rows:
+        wjobs = int(wjobs or 0)
+        so = int(so or 0)
+        rate = float(rate or 0.0)
+        if slowdown_flag(wjobs, so, rate):
+            month_candidates.append({
+                "company": name or "",
+                "window_jobs": wjobs,
+                "still_open": so,
+                "rate": rate,
+                "window": f"{ws} to {we}"
+            })
+
+    month_candidates.sort(key=lambda x: (x["still_open"], x["rate"]), reverse=True)
+    month_candidates = month_candidates[:50]
+
+    weekly_rows = []
+    if len(week_ends) == 3:
+        placeholders = ",".join(["?"] * 3)
+        weekly_rows = conn.execute(f"""
+            SELECT employer_name, employer_norm, week_end, window_jobs, still_open_jobs, still_open_rate
+            FROM company_still_open_weekly3
+            WHERE week_end IN ({placeholders})
+        """, week_ends).fetchall()
+
+    by_company: Dict[str, Dict[str, Any]] = {}
+    for name, en, wend, wjobs, so, rate in weekly_rows:
+        en = en or ""
+        if en not in by_company:
+            by_company[en] = {"company": name or "", "points": {}}
+        by_company[en]["points"][wend] = {
+            "window_jobs": int(wjobs or 0),
+            "still_open": int(so or 0),
+            "rate": float(rate or 0.0),
+        }
+
+    trend_candidates = []
+    if len(week_ends) == 3:
+        newest, mid, oldest = week_ends[0], week_ends[1], week_ends[2]
+        for _en, obj in by_company.items():
+            pts = obj["points"]
+            if oldest not in pts or mid not in pts or newest not in pts:
+                continue
+
+            r0 = pts[oldest]["rate"]
+            r1 = pts[mid]["rate"]
+            r2 = pts[newest]["rate"]
+            so_tot = pts[oldest]["still_open"] + pts[mid]["still_open"] + pts[newest]["still_open"]
+            w_tot = pts[oldest]["window_jobs"] + pts[mid]["window_jobs"] + pts[newest]["window_jobs"]
+
+            if w_tot < 6:
+                continue
+
+            avg_rate = (r0 + r1 + r2) / 3.0
+            delta = r2 - r0
+
+            is_flag = (avg_rate >= 0.45 and so_tot >= 6) or (delta >= 0.15 and so_tot >= 4) or (r2 >= 0.60 and pts[newest]["still_open"] >= 3)
+            if is_flag:
+                trend_candidates.append({
+                    "company": obj["company"],
+                    "avg_rate": avg_rate,
+                    "delta": delta,
+                    "so_tot": so_tot,
+                    "w_tot": w_tot,
+                    "r_old": r0,
+                    "r_mid": r1,
+                    "r_new": r2,
+                    "so_new": pts[newest]["still_open"],
+                    "w_new": pts[newest]["window_jobs"],
+                    "week_old": oldest,
+                    "week_mid": mid,
+                    "week_new": newest,
+                })
+
+    trend_candidates.sort(key=lambda x: (x["so_new"], x["delta"], x["avg_rate"]), reverse=True)
+    trend_candidates = trend_candidates[:50]
+
+    def pct(x: float) -> str:
+        return f"{x*100:.1f}%"
+
+    hiring_tables = f"""
+  <h2>Trends</h2>
+
+  <h3 style="margin-top:10px;">Companies with hiring delays</h3>
+  <p class="muted">
+    “Hiring delays” = postings first seen earlier that appear to still be open now (same <code>job_id</code> overlap with current JSearch results).
+    Computed for tracked companies (top N by monthly captured postings).
+  </p>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Month snapshot — {this_month}</h3>
+      <div class="small muted">Window shown is 30–45 days ago relative to today.</div>
+      <table style="margin-top:10px;">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Window</th>
+            <th>Window jobs</th>
+            <th>Still open</th>
+            <th>Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {''.join([
+            f"<tr><td>{r['company']}</td><td>{r['window']}</td><td>{r['window_jobs']}</td><td>{r['still_open']}</td><td>{pct(r['rate'])}</td></tr>"
+            for r in month_candidates
+          ]) if month_candidates else "<tr><td colspan='5'>No hiring-delay companies flagged yet for this month (or metrics not computed yet).</td></tr>"}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>3-week trend (completed weeks)</h3>
+      <div class="small muted">
+        Weeks end on Saturday. Shows rate change from oldest → newest week.
+      </div>
+      <table style="margin-top:10px;">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Newest week end</th>
+            <th>Newest still open</th>
+            <th>Newest rate</th>
+            <th>Δ rate (old→new)</th>
+            <th>Avg rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {''.join([
+            f"<tr>"
+            f"<td>{t['company']}</td>"
+            f"<td>{t['week_new']}</td>"
+            f"<td>{t['so_new']} / {t['w_new']}</td>"
+            f"<td>{pct(t['r_new'])}</td>"
+            f"<td>{pct(t['delta'])}</td>"
+            f"<td>{pct(t['avg_rate'])}</td>"
+            f"</tr>"
+            for t in trend_candidates
+          ]) if trend_candidates else "<tr><td colspan='6'>No 3-week hiring-delay trends flagged yet (or not enough weekly history).</td></tr>"}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr style="margin:22px 0; border:none; border-top:1px solid #eee;" />
+"""
+
+    # --- existing trends calculations ---
     months = []
     d = today.replace(day=1)
     for _ in range(12):
@@ -1031,8 +1478,7 @@ def build_trends_page(db_path: str) -> str:
     req_cols = req_tags
     title_cols = list(title_keywords.keys())
 
-    body = f"""
-      <h2>Trends</h2>
+    body = hiring_tables + f"""
       <p class="muted">
         Monthly counts of captured <b>unique job IDs</b>. Use the dropdown to change the chart variable.
         Title keyword counts are based on <code>job_title</code> contains-match.
@@ -1082,7 +1528,7 @@ def build_trends_page(db_path: str) -> str:
       </table>
 
       <h3 style="margin-top:22px;">Monthly table — Title keywords</h3>
-      <p class="small muted">Counts where <code>LOWER(job_title)</code> contains the keyword.</p>
+      <p class="small muted">Counts where the job title contains the keyword.</p>
 
       <table>
         <thead>
