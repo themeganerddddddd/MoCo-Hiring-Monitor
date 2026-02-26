@@ -377,6 +377,7 @@ def derive_fields(job: Dict[str, Any]) -> str:
         "electrician",
         "mechanic",
         "installer",
+        "health",
     ]
 
     tech_excluded = (
@@ -928,3 +929,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
