@@ -331,52 +331,141 @@ def derive_fields(job: Dict[str, Any]) -> str:
     def has_word(w: str) -> bool:
         return re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", text) is not None
 
+    # ----------------------------
+    # TECHNOLOGY
+    # ----------------------------
+
     tech_phrases = [
         "software", "developer", "machine learning", "cloud",
         "cybersecurity", "devops", "full stack", "fullstack",
         "backend", "frontend", "data engineer", "data scientist",
-        "database", "network", "systems", "sre", "programmer",
-        "aws", "azure", "gcp", "cyber", "digital", "virtual",
+        "database", "network engineer", "systems engineer",
+        "sre", "programmer",
+        "aws", "azure", "gcp", "cyber",
         "python", "java", "javascript", "typescript", "react", "sql",
-        "technologies", "tech", "technology", "system administrator"
+        "system administrator"
     ]
-    tech_words = ["ai", "ml", "it", "api", "etl"]
+
+    tech_words = ["ai", "ml", "api", "etl"]
+
+    tech_exclude_phrases = [
+        "automotive technician",
+        "maintenance technician",
+        "service technician",
+        "hvac technician",
+        "repair technician",
+        "field technician",
+        "pharmacy technician",
+        "nail technician",
+        "behavior technician",
+        "veterinary technician",
+        "medical technician",
+        "lab technician",
+        "manufacturing technician",
+        "it support",
+        "help desk",
+        "desktop support",
+        "computer teacher",
+        "technology teacher",
+        "educational technology",
+    ]
+
+    tech_exclude_words = [
+        "custodian",
+        "janitor",
+        "plumber",
+        "electrician",
+        "mechanic",
+        "installer",
+    ]
+
+    tech_excluded = (
+        any(has_phrase(p) for p in tech_exclude_phrases)
+        or any(has_word(w) for w in tech_exclude_words)
+    )
+
+    tech_hit = (
+        (any(has_phrase(p) for p in tech_phrases) or any(has_word(w) for w in tech_words))
+        and not tech_excluded
+    )
+
+    # ----------------------------
+    # LIFE SCIENCES
+    # ----------------------------
 
     life_phrases = [
         "biotech", "bioinformatics", "laboratory", "clinical", "pharma",
         "assay", "regulatory", "molecular", "genomics", "microbiology",
-        "biologist", "scientist", "chemist", "gene", "life", "health",
+        "biologist", "scientist", "chemist", "gene",
         "therapeutics", "biosciences", "biologics", "diagnostics"
     ]
+
     life_words = ["lab", "qc", "qa"]
-    life_exclude_phrases = ["nurse", "doctor", "physician", "dentist", "dental", "hygienist"]
+
+    life_exclude_phrases = [
+        "nurse", "doctor", "physician", "dentist",
+        "dental", "hygienist", "hospital"
+    ]
+
     life_exclude_words = ["rn", "cna"]
+
+    life_excluded = (
+        any(has_phrase(p) for p in life_exclude_phrases)
+        or any(has_word(w) for w in life_exclude_words)
+    )
+
+    life_hit = (
+        (any(has_phrase(p) for p in life_phrases) or any(has_word(w) for w in life_words))
+        and not life_excluded
+    )
+
+    # ----------------------------
+    # AERO / DEFENSE / SATELLITE
+    # ----------------------------
 
     aero_phrases = [
         "aerospace", "satellite", "space", "radar", "defense",
         "spacecraft", "ground station", "communications satellite",
-        "sigint", "clearance", "cleared", "aero",
+        "sigint", "clearance", "cleared",
         "aeronautics", "space systems", "defense systems", "satcom",
         "navy", "army"
     ]
+
     aero_words = ["rf", "dod"]
-    aero_tokens = ["ts/sci", "ts sci", "secret clearance", "top secret"]
+
+    aero_tokens = [
+        "ts/sci", "ts sci",
+        "secret clearance", "top secret"
+    ]
+
+    aero_hit = (
+        any(has_phrase(p) for p in aero_phrases)
+        or any(has_word(w) for w in aero_words)
+        or any(has_phrase(t) for t in aero_tokens)
+    )
+
+    # ----------------------------
+    # Retail / noise blockers
+    # ----------------------------
 
     retail_blockers = [
-        "cashier", "barista", "server", "waiter", "waitress", "crew member",
-        "store associate", "retail associate", "stock associate", "teacher"
+        "cashier", "barista", "server", "waiter", "waitress",
+        "crew member", "store associate", "retail associate",
+        "stock associate", "teacher"
     ]
+
     is_retailish = any(b in text for b in retail_blockers)
 
-    tech_hit = (any(has_phrase(p) for p in tech_phrases) or any(has_word(w) for w in tech_words))
-    aero_hit = (any(has_phrase(p) for p in aero_phrases) or any(has_word(w) for w in aero_words) or any(has_phrase(t) for t in aero_tokens))
-    life_excluded = any(has_phrase(p) for p in life_exclude_phrases) or any(has_word(w) for w in life_exclude_words)
-    life_hit = ((any(has_phrase(p) for p in life_phrases) or any(has_word(w) for w in life_words)) and not life_excluded)
+    # ----------------------------
+    # Apply tags
+    # ----------------------------
 
     if tech_hit and not is_retailish:
         tags.add("technology")
+
     if aero_hit and not is_retailish:
         tags.add("aero_defense_sat")
+
     if life_hit:
         tags.add("life_sciences")
 
@@ -837,4 +926,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
