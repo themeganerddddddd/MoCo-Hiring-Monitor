@@ -32,8 +32,7 @@ jobs:
         run: |
           python monitor.py daily
 
-      # ✅ DAILY retag so Search + sector tags stay correct for SQL LIKE matching
-      - name: Retag fields in DB (last 365 days)
+      - name: Retag fields (keeps Search + weekly tags accurate)
         env:
           DB_PATH: ./data/moco_jobs.sqlite
         run: |
@@ -50,6 +49,7 @@ jobs:
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           DB_PATH: ./data/moco_jobs.sqlite
+          INDICATORS_TOP_N: "20"   # increase if your quota allows, e.g. "100"
         run: |
           python dashboard.py
 
