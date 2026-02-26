@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MoCo Hiring Monitor — Technology</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    .meta { color: #444; margin-bottom: 16px; line-height: 1.5; }
+    .pill { display:inline-block; padding:2px 10px; border:1px solid #ddd; border-radius: 999px; font-size: 12px; margin-right: 8px; }
+    .pill.ok { border-color: #9ad29a; background: #f2fbf2; }
+    .pill.warn { border-color: #f0d090; background: #fff8e6; }
+    .tabs { display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 18px; }
+    .tab { padding:8px 12px; border:1px solid #ddd; border-radius: 999px; text-decoration:none; color:#222; }
+    .tab.active { background:#111; color:#fff; border-color:#111; }
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 12px; margin: 16px 0 22px; }
+    .card { border: 1px solid #eee; border-radius: 14px; padding: 14px; }
+    .card h3 { margin: 0 0 10px; font-size: 14px; color: #333; }
+    .big { font-size: 22px; font-weight: 650; }
+    .small { color: #666; font-size: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: white; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
+    .badge.verified { border-color: #9ad29a; background: #f2fbf2; }
+    .badge.unverified { border-color: #ddd; background: #fafafa; }
+    .muted { color:#666; }
+    .hint { border-left: 3px solid #eee; padding-left: 10px; margin: 14px 0; }
+    input[type="text"] { width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; }
+    .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>MoCo Hiring Monitor</h1>
+  <div class="tabs"><a class="tab" href="index.html">Daily</a><a class="tab" href="weekly.html">Weekly</a><a class="tab active" href="technology.html">Technology</a><a class="tab" href="lifesciences.html">Life Sciences</a><a class="tab" href="aerodefense.html">Aero/Defense/Sat</a><a class="tab" href="indicators.html">Company Indicators</a><a class="tab" href="trends.html">Trends</a><a class="tab" href="search.html">Search</a></div>
+
+  <div class="meta">
+    <span class="pill ">Last updated</span> 2026-02-26T05:33:12Z &nbsp; <span class="pill ">Sector</span> <code>technology</code>
+  </div>
+
+  
+      <h2>Technology</h2>
+      <div class="meta"><span class="pill ">Week</span> <b>2026-02-22</b> (Sun) to <b>2026-02-28</b> (Sat)</div>
+    
+  <div class="grid">
+    <div class="card">
+      <h3>Jobs scanned</h3>
+      <div class="big">7</div>
+      <div class="small">Tab-specific definition</div>
+    </div>
+    <div class="card">
+      <h3>Jobs inside MoCo</h3>
+      <div class="big">7</div>
+      <div class="small">After MoCo filter / captured-in-DB</div>
+    </div>
+    <div class="card">
+      <h3>New companies</h3>
+      <div class="big">7</div>
+      <div class="small">First time seen (tab period)</div>
+    </div>
+    <div class="card">
+      <h3>New unique jobs</h3>
+      <div class="big">7</div>
+      <div class="small">Distinct job IDs first seen (tab period)</div>
+    </div>
+  </div>
+  <div class="small muted" style="margin-top:8px;">Sector tab stats count captured jobs tagged to this sector during the week.</div>
+
+      <h3>Top hiring companies (sector, this week)</h3>
+      <table>
+        <thead><tr><th>Rank</th><th>Company</th><th>Unique postings captured</th></tr></thead>
+        <tbody>
+    <tr><td>1</td><td>Vander Support</td><td>1</td></tr><tr><td>2</td><td>RCG Inc</td><td>1</td></tr><tr><td>3</td><td>Leonardo DRS, Inc.</td><td>1</td></tr><tr><td>4</td><td>GHA Technologies, Inc</td><td>1</td></tr><tr><td>5</td><td>Cynet Health</td><td>1</td></tr><tr><td>6</td><td>Bialek Environments</td><td>1</td></tr><tr><td>7</td><td>Axle</td><td>1</td></tr></tbody></table>
+      <h3 style="margin-top:22px;">New companies (sector, this week)</h3>
+      <table>
+        <thead><tr><th>Company</th><th>First seen</th><th>Verified by Places</th></tr></thead>
+        <tbody>
+    <tr><td>Axle</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>Bialek Environments</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>Cynet Health</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>GHA Technologies, Inc</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>Leonardo DRS, Inc.</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>RCG Inc</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr><tr><td>Vander Support</td><td>2026-02-25</td><td><span class="badge unverified" title="">Unverified</span></td></tr></tbody></table>
+      <h3 style="margin-top:22px;">Jobs captured (sector, this week)</h3>
+      <table>
+        <thead><tr><th>Date</th><th>Company</th><th>Title</th><th>Salary</th><th>Requirements</th></tr></thead>
+        <tbody>
+    <tr><td>2026-02-25</td><td>Axle</td><td><a href="https://www.linkedin.com/jobs/view/assay-technologist-research-associate-at-axle-4376439235?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic" target="_blank" rel="noopener">Assay Technologist / Research Associate</a></td><td></td><td>more_than_3_years_experience</td></tr><tr><td>2026-02-25</td><td>Bialek Environments</td><td><a href="https://www.simplyhired.com/job/L1s-vPS6YIp9WB5k2u2TyQRR9rR86MNGUub1Lde6eXYxH37IEwCQKA?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic" target="_blank" rel="noopener">Furniture Service Technician</a></td><td></td><td>more_than_3_years_experience,no_degree</td></tr><tr><td>2026-02-25</td><td>Vander Support</td><td><a href="https://v2valuejobs.com/listings/aoe0rldj0db9-586d3-20d054c1da2-remote-7fd4e99e7d8052a7?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic" target="_blank" rel="noopener">Virtual Keyboard Specialist - Start Now ($19/Hour)</a></td><td></td><td>more_than_3_years_experience,no_experience</td></tr><tr><td>2026-02-25</td><td>Cynet Health</td><td><a href="https://www.monster.com/job-openings/travel-sterile-processing-tech-2-493-per-week-in-bethesda-md-bethesda-md--38b556fc-d2e8-40cf-b031-ce2ea26f48f2?mstr_dist=true" target="_blank" rel="noopener">Travel Sterile Processing Tech - $2,493 per week in Bethesda, MD</a></td><td></td><td>more_than_3_years_experience</td></tr><tr><td>2026-02-25</td><td>RCG Inc</td><td><a href="https://www.indeed.com/viewjob?jk=38953a420d1e0840&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic" target="_blank" rel="noopener">System Administrator</a></td><td>80000-85000 YEAR</td><td>more_than_3_years_experience</td></tr><tr><td>2026-02-25</td><td>GHA Technologies, Inc</td><td><a href="https://www.ziprecruiter.com/c/GHA-Technologies/Job/Sales-Representatives,-Regional-Sales-Managers,-Sales-VPs,-and-or-National-Account-Managers/-in-Gaithersburg,MD?jid=7dd25332842a0204&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic" target="_blank" rel="noopener">Sales Representatives, Regional Sales Managers, Sales VP's, and / or National Account Managers</a></td><td></td><td></td></tr><tr><td>2026-02-25</td><td>Leonardo DRS, Inc.</td><td><a href="https://www.snagajob.com/jobs/1215442383" target="_blank" rel="noopener">RF Test Technician - 2nd shift - Full-time</a></td><td></td><td></td></tr></tbody></table>
+
+  <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+  <div class="small">
+    Hosting: GitHub Pages serves <code>docs/</code>. Data accumulates because <code>data/moco_jobs.sqlite</code> is committed after each run.
+  </div>
+</body>
+</html>

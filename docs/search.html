@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MoCo Hiring Monitor — Search</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    .meta { color: #444; margin-bottom: 16px; line-height: 1.5; }
+    .pill { display:inline-block; padding:2px 10px; border:1px solid #ddd; border-radius: 999px; font-size: 12px; margin-right: 8px; }
+    .pill.ok { border-color: #9ad29a; background: #f2fbf2; }
+    .pill.warn { border-color: #f0d090; background: #fff8e6; }
+    .tabs { display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 18px; }
+    .tab { padding:8px 12px; border:1px solid #ddd; border-radius: 999px; text-decoration:none; color:#222; }
+    .tab.active { background:#111; color:#fff; border-color:#111; }
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 12px; margin: 16px 0 22px; }
+    .card { border: 1px solid #eee; border-radius: 14px; padding: 14px; }
+    .card h3 { margin: 0 0 10px; font-size: 14px; color: #333; }
+    .big { font-size: 22px; font-weight: 650; }
+    .small { color: #666; font-size: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: white; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
+    .badge.verified { border-color: #9ad29a; background: #f2fbf2; }
+    .badge.unverified { border-color: #ddd; background: #fafafa; }
+    .muted { color:#666; }
+    .hint { border-left: 3px solid #eee; padding-left: 10px; margin: 14px 0; }
+    input[type="text"] { width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; }
+    .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>MoCo Hiring Monitor</h1>
+  <div class="tabs"><a class="tab" href="index.html">Daily</a><a class="tab" href="weekly.html">Weekly</a><a class="tab" href="technology.html">Technology</a><a class="tab" href="lifesciences.html">Life Sciences</a><a class="tab" href="aerodefense.html">Aero/Defense/Sat</a><a class="tab" href="indicators.html">Company Indicators</a><a class="tab" href="trends.html">Trends</a><a class="tab active" href="search.html">Search</a></div>
+
+  <div class="meta">
+    <span class="pill ">Last updated</span> 2026-02-26T05:33:12Z
+  </div>
+
+  
+      <h2>Search</h2>
+      <p class="muted">Type a company name or keywords to search across all captured companies or jobs.</p>
+      <input id="q" type="text" placeholder="e.g., Lockheed, Bethesda, Engineer, Bioinformatics..." />
+      <div class="meta" id="meta"></div>
+
+      <table>
+        <thead><tr><th>Date</th><th>Company</th><th>Title</th><th>Salary</th><th>Reqs</th><th>Fields</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+
+      <script>
+        async function loadIndex() {
+          const res = await fetch('search_index.json');
+          return await res.json();
+        }
+
+        function esc(s){
+          return (s||'')
+            .replaceAll('&','&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;');
+        }
+
+        function render(items) {
+          const tbody = document.getElementById('rows');
+          tbody.innerHTML = items.map(it => {
+            const title = it.link ? `<a href="${it.link}" target="_blank" rel="noopener">${esc(it.title)}</a>` : esc(it.title);
+            return `<tr>
+              <td>${esc(it.date)}</td>
+              <td>${esc(it.company)}</td>
+              <td>${title}</td>
+              <td>${esc(it.salary)}</td>
+              <td>${esc(it.reqs)}</td>
+              <td>${esc(it.fields)}</td>
+            </tr>`;
+          }).join('');
+        }
+
+        (async () => {
+          const idx = await loadIndex();
+          const all = idx.jobs || [];
+          document.getElementById('meta').textContent = `Total Database Last Refreshed: ${idx.generated_utc}. Total Job Records: ${all.length}.`;
+
+          const input = document.getElementById('q');
+          function run() {
+            const q = (input.value || '').toLowerCase().trim();
+            if (!q) { render(all.slice(0,200)); return; }
+            const terms = q.split(/\s+/).filter(Boolean);
+            const out = [];
+            for (const it of all) {
+              const hay = ((it.company||'') + ' ' + (it.title||'')).toLowerCase();
+              let ok = true;
+              for (const t of terms) { if (!hay.includes(t)) { ok = false; break; } }
+              if (ok) out.push(it);
+              if (out.length >= 500) break;
+            }
+            render(out);
+          }
+          input.addEventListener('input', run);
+          run();
+        })();
+      </script>
+    
+
+  <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+  <div class="small">
+    Hosting: GitHub Pages serves <code>docs/</code>. Data accumulates because <code>data/moco_jobs.sqlite</code> is committed after each run.
+  </div>
+</body>
+</html>

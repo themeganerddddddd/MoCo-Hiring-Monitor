@@ -1,0 +1,224 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MoCo Hiring Monitor — Trends</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    .meta { color: #444; margin-bottom: 16px; line-height: 1.5; }
+    .pill { display:inline-block; padding:2px 10px; border:1px solid #ddd; border-radius: 999px; font-size: 12px; margin-right: 8px; }
+    .pill.ok { border-color: #9ad29a; background: #f2fbf2; }
+    .pill.warn { border-color: #f0d090; background: #fff8e6; }
+    .tabs { display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 18px; }
+    .tab { padding:8px 12px; border:1px solid #ddd; border-radius: 999px; text-decoration:none; color:#222; }
+    .tab.active { background:#111; color:#fff; border-color:#111; }
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 12px; margin: 16px 0 22px; }
+    .card { border: 1px solid #eee; border-radius: 14px; padding: 14px; }
+    .card h3 { margin: 0 0 10px; font-size: 14px; color: #333; }
+    .big { font-size: 22px; font-weight: 650; }
+    .small { color: #666; font-size: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: white; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
+    .badge.verified { border-color: #9ad29a; background: #f2fbf2; }
+    .badge.unverified { border-color: #ddd; background: #fafafa; }
+    .muted { color:#666; }
+    .hint { border-left: 3px solid #eee; padding-left: 10px; margin: 14px 0; }
+    input[type="text"] { width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; }
+    .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>MoCo Hiring Monitor</h1>
+  <div class="tabs"><a class="tab" href="index.html">Daily</a><a class="tab" href="weekly.html">Weekly</a><a class="tab" href="technology.html">Technology</a><a class="tab" href="lifesciences.html">Life Sciences</a><a class="tab" href="aerodefense.html">Aero/Defense/Sat</a><a class="tab" href="indicators.html">Company Indicators</a><a class="tab active" href="trends.html">Trends</a><a class="tab" href="search.html">Search</a></div>
+
+  <div class="meta">
+    <span class="pill ">Last updated</span> 2026-02-26T05:33:12Z
+  </div>
+
+  
+      <h2>Trends</h2>
+      <p class="muted">
+        Monthly counts of captured <b>unique job IDs</b>. Use the dropdown to change the chart variable.
+        Title keyword counts are based on <code>job_title</code> contains-match.
+      </p>
+
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <h3 style="margin:0;">Trend chart</h3>
+          <div class="small muted">Hover the line to see month/value.</div>
+          <div style="margin-left:auto; min-width:260px;">
+            <label class="small muted" for="seriesSelect">Graph variable</label><br/>
+            <select id="seriesSelect" style="padding:8px 10px; border:1px solid #ddd; border-radius:10px; width:100%;"></select>
+          </div>
+        </div>
+
+        <div style="position:relative; margin-top:10px;">
+          <svg id="trendSvg" width="100%" viewBox="0 0 900 260" role="img" aria-label="Trend chart"></svg>
+          <div id="tooltip" style="
+                position:absolute; display:none; pointer-events:none;
+                background:#111; color:#fff; padding:6px 8px; border-radius:10px;
+                font-size:12px; transform: translate(-50%, -120%);
+              "></div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px;">Monthly table — Requirements</h3>
+      <p class="small muted">Counts where <code>job_requirements</code> contains the tag.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>no_experience</th><th>under_3_years_experience</th><th>more_than_3_years_experience</th><th>no_degree</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr><td>2025-03</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-04</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-05</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-06</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-07</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-08</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-09</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-10</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-11</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-12</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2026-01</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2026-02</td><td>13</td><td>27</td><td>36</td><td>6</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:22px;">Monthly table — Title keywords</h3>
+      <p class="small muted">Counts where <code>LOWER(job_title)</code> contains the keyword.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>engineer</th><th>chemist</th><th>software_developer</th><th>data_scientist</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr><td>2025-03</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-04</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-05</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-06</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-07</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-08</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-09</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-10</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-11</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2025-12</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2026-01</td><td>2</td><td>0</td><td>0</td><td>0</td></tr><tr><td>2026-02</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+        </tbody>
+      </table>
+
+      <script>
+        const DATA = {"months": ["2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"], "series": {"req:no_experience": {"label": "Requirement: no_experience", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13]}, "req:under_3_years_experience": {"label": "Requirement: under_3_years_experience", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]}, "req:more_than_3_years_experience": {"label": "Requirement: more_than_3_years_experience", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 36]}, "req:no_degree": {"label": "Requirement: no_degree", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6]}, "title:engineer": {"label": "Title contains: engineer", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0]}, "title:chemist": {"label": "Title contains: chemist", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "title:software_developer": {"label": "Title contains: software_developer", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "title:data_scientist": {"label": "Title contains: data_scientist", "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}}, "default": "req:no_experience"};
+
+        const svg = document.getElementById('trendSvg');
+        const tooltip = document.getElementById('tooltip');
+        const select = document.getElementById('seriesSelect');
+
+        const W = 900, H = 260;
+        const padL = 55, padR = 18, padT = 18, padB = 38;
+
+        function clearSvg() {
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+        }
+
+        function el(name, attrs = {}) {
+          const n = document.createElementNS('http://www.w3.org/2000/svg', name);
+          for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+          return n;
+        }
+
+        function xAt(i, n) {
+          if (n <= 1) return padL;
+          return padL + (i * (W - padL - padR) / (n - 1));
+        }
+
+        function yAt(v, maxY) {
+          return padT + (H - padT - padB) * (1 - (v / maxY));
+        }
+
+        function render(key) {
+          const months = DATA.months;
+          const s = DATA.series[key];
+          const vals = (s && s.values) ? s.values : [];
+          const label = (s && s.label) ? s.label : key;
+
+          const maxY = Math.max(1, ...vals);
+          clearSvg();
+
+          svg.appendChild(el('rect', {x:0, y:0, width:W, height:H, fill:'white'}));
+          svg.appendChild(el('line', {x1:padL, y1:H-padB, x2:W-padR, y2:H-padB, stroke:'#ddd'}));
+          svg.appendChild(el('line', {x1:padL, y1:padT, x2:padL, y2:H-padB, stroke:'#ddd'}));
+
+          svg.appendChild(el('text', {x:padL, y:14, fill:'#111', 'font-size':'12'})).textContent = label;
+
+          for (let i=0; i<months.length; i+=2) {
+            const tx = xAt(i, months.length);
+            const t = el('text', {x:tx, y:H-14, fill:'#666', 'font-size':'10', 'text-anchor':'middle'});
+            t.textContent = months[i];
+            svg.appendChild(t);
+          }
+
+          const pts = vals.map((v,i) => `${xAt(i, months.length).toFixed(1)},${yAt(v, maxY).toFixed(1)}`).join(' ');
+          svg.appendChild(el('polyline', {points: pts, fill:'none', stroke:'#111', 'stroke-width':'2'}));
+
+          const vline = el('line', {x1:padL, y1:padT, x2:padL, y2:H-padB, stroke:'#bbb', 'stroke-dasharray':'4 4', opacity:'0'});
+          const dot = el('circle', {cx:padL, cy:padT, r:'4', fill:'#111', opacity:'0'});
+          svg.appendChild(vline);
+          svg.appendChild(dot);
+
+          function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+          function onMove(evt) {
+            const rect = svg.getBoundingClientRect();
+            const mx = evt.clientX - rect.left;
+            const svgX = (mx / rect.width) * W;
+
+            const n = months.length;
+            const idxFloat = (n <= 1) ? 0 : ((svgX - padL) / (W - padL - padR)) * (n - 1);
+            const idx = clamp(Math.round(idxFloat), 0, n-1);
+
+            const x = xAt(idx, n);
+            const v = vals[idx] ?? 0;
+            const y = yAt(v, maxY);
+
+            vline.setAttribute('x1', x);
+            vline.setAttribute('x2', x);
+            vline.setAttribute('opacity', '1');
+
+            dot.setAttribute('cx', x);
+            dot.setAttribute('cy', y);
+            dot.setAttribute('opacity', '1');
+
+            tooltip.style.display = 'block';
+            tooltip.textContent = `${months[idx]} — ${v}`;
+            tooltip.style.left = `${(x / W) * rect.width}px`;
+            tooltip.style.top  = `${(y / H) * rect.height}px`;
+          }
+
+          function onLeave() {
+            vline.setAttribute('opacity', '0');
+            dot.setAttribute('opacity', '0');
+            tooltip.style.display = 'none';
+          }
+
+          svg.onmousemove = onMove;
+          svg.onmouseleave = onLeave;
+        }
+
+        const entries = Object.entries(DATA.series)
+          .map(([k,v]) => ({key:k, label:v.label}))
+          .sort((a,b) => a.label.localeCompare(b.label));
+
+        for (const e of entries) {
+          const opt = document.createElement('option');
+          opt.value = e.key;
+          opt.textContent = e.label;
+          select.appendChild(opt);
+        }
+
+        select.value = DATA.default;
+        select.onchange = () => render(select.value);
+
+        render(DATA.default);
+      </script>
+    
+
+  <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+  <div class="small">
+    Hosting: GitHub Pages serves <code>docs/</code>. Data accumulates because <code>data/moco_jobs.sqlite</code> is committed after each run.
+  </div>
+</body>
+</html>
