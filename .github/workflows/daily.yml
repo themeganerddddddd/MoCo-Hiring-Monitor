@@ -39,6 +39,9 @@ jobs:
           python monitor.py monthly --month "$(date -u +'%Y-%m')"
 
       - name: Build dashboard
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          RAPIDAPI_HOST: jsearch.p.rapidapi.com
         run: |
           python dashboard.py
 
