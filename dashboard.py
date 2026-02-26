@@ -741,8 +741,8 @@ def build_weekly_page(db_path: str) -> str:
         body = "<h2>Weekly</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell("MoCo Hiring Monitor — Weekly", "weekly", meta, body)
 
-    today = date.today()
-    start, end = most_recent_completed_week(today)
+    today = datetime.utcnow().date()  # instead of date.today()
+    start, end = pick_week_range_with_fallback(conn, today)
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
@@ -879,8 +879,8 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         body = f"<h2>{title}</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell(f"MoCo Hiring Monitor — {title}", active, meta, body)
 
-    today = date.today()
-    start, end = most_recent_completed_week(today)
+    today = datetime.utcnow().date()  # instead of date.today()
+    start, end = pick_week_range_with_fallback(conn, today)
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
@@ -1228,6 +1228,30 @@ def build_company_indicators_page(db_path: str) -> str:
 # ----------------------------
 # Trends + Search
 # ----------------------------
+
+def pick_week_range_with_fallback(conn: sqlite3.Connection, today: date) -> Tuple[date, date]:
+    # Prefer last completed Sun->Sat
+    start, end = most_recent_completed_week(today)
+    start_s = start.isoformat()
+    end_excl = (end + timedelta(days=1)).isoformat()
+
+    has_data = conn.execute("""
+        SELECT 1
+        FROM jobs
+        WHERE first_seen_run_date >= ?
+          AND first_seen_run_date < ?
+        LIMIT 1
+    """, (start_s, end_excl)).fetchone() is not None
+
+    if has_data:
+        return start, end
+
+    # Fallback: current week-to-date (Sun -> today)
+    cur_start, cur_end = sunday_to_saturday_range(today)
+    return cur_start, today  # week-to-date
+
+
+
 
 def build_trends_page(db_path: str) -> str:
     now = utc_now_iso()
