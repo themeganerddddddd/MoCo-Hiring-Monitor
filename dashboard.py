@@ -68,6 +68,31 @@ def sunday_to_saturday_range(d: date) -> Tuple[date, date]:
     return start, end
 
 
+def last_completed_week_range_utc(today: Optional[date] = None) -> Tuple[date, date]:
+    """
+    Returns the most recent FULLY COMPLETED Sun-Sat week.
+
+    We define a completed week as one whose Saturday is strictly before "today"
+    unless today is Sunday (then yesterday was Saturday and that week is completed).
+
+    Implementation: find the most recent Saturday strictly before today (or yesterday if Sunday),
+    then return the Sun-Sat range containing that Saturday.
+    """
+    if today is None:
+        today = date.today()  # runner date (UTC-ish on GitHub-hosted Linux)
+
+    # weekday: Mon=0 ... Sun=6, Sat=5
+    wd = today.weekday()
+    delta = (wd - 5) % 7  # days since last Saturday (0 if Saturday, 1 if Sunday, 2 if Monday, ...)
+    if delta == 0:
+        # If it's Saturday (your run is early), the week hasn't "fully completed" yet,
+        # so use the previous Saturday (7 days ago).
+        delta = 7
+
+    last_saturday = today - timedelta(days=delta)
+    return sunday_to_saturday_range(last_saturday)
+
+
 def month_start_end(month_yyyy_mm: str) -> Tuple[date, date]:
     start = datetime.strptime(month_yyyy_mm + "-01", "%Y-%m-%d").date()
     if start.month == 12:
@@ -98,8 +123,6 @@ def normalize_company(name: str) -> str:
     return s
 
 
-# ✅ Weekly-only exclude list (does NOT affect daily)
-# Use human-readable names; we normalize them once into employer_norm form.
 EXCLUDE_WEEKLY_COMPANIES = {
     "uber",
     "uber technologies",
@@ -117,9 +140,6 @@ EXCLUDE_WEEKLY_NORMS = {normalize_company(x) for x in EXCLUDE_WEEKLY_COMPANIES i
 
 
 def _sql_not_in_clause(col: str, values: List[str]) -> Tuple[str, List[str]]:
-    """
-    Returns ("AND col NOT IN (?,?,?)", params) or ("", []) if no values.
-    """
     if not values:
         return "", []
     placeholders = ",".join(["?"] * len(values))
@@ -204,13 +224,6 @@ def html_shell(title: str, active: str, meta_line_html: str, body_html: str):
 # “Coverage stats” for tabs
 # ----------------------------
 
-def read_latest_daily_run_date() -> Optional[str]:
-    latest_daily = find_latest("new_companies_")
-    if not latest_daily:
-        return None
-    return latest_daily.replace("new_companies_", "").replace(".csv", "")
-
-
 def read_latest_run_stats_for_date(db_path: str, run_date: str) -> Optional[Dict[str, Any]]:
     conn = connect_db(db_path)
     if not conn:
@@ -238,10 +251,6 @@ def read_latest_run_stats_for_date(db_path: str, run_date: str) -> Optional[Dict
 
 
 def sum_run_stats_over_range(db_path: str, start_date: date, end_date_inclusive: date) -> Optional[Dict[str, Any]]:
-    """
-    For Weekly tab: sums the 'runs' table across the week to create true
-    'jobs scanned' (API returned) numbers for that week.
-    """
     conn = connect_db(db_path)
     if not conn:
         return None
@@ -271,13 +280,6 @@ def sum_run_stats_over_range(db_path: str, start_date: date, end_date_inclusive:
 
 
 def sector_week_stats(db_path: str, field_tag: str, start: date, end: date) -> Dict[str, Any]:
-    """
-    Sector weekly stats used by the 4 tiles on sector pages.
-
-    IMPORTANT:
-    - These are NOT raw API-returned "jobs scanned" by sector.
-    - They are counts of captured jobs tagged to this sector during the week.
-    """
     conn = connect_db(db_path)
     if not conn:
         return {
@@ -486,22 +488,16 @@ def build_weekly_page(db_path: str) -> str:
         body = "<h2>Weekly</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell("MoCo Hiring Monitor — Weekly", "weekly", meta, body)
 
-    today = date.today()
-    start, end = sunday_to_saturday_range(today)
+    # ✅ MOST RECENT FULL WEEK (Sun–Sat), not the current partial week
+    start, end = last_completed_week_range_utc()
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
     week_stats = sum_run_stats_over_range(db_path, start, end)
 
-    # ✅ exclude by employer_norm at query-time
     excl_vals = sorted(EXCLUDE_WEEKLY_NORMS)
     excl_clause, excl_params = _sql_not_in_clause("employer_norm", excl_vals)
 
-    # ---------------------------------------
-    # New companies detected this week
-    #  - include ONE sample job per company:
-    #    title (hyperlink), salary, requirements
-    # ---------------------------------------
     new_cos = conn.execute(f"""
         SELECT employer_name, employer_norm, first_seen_run_date, places_verified, places_address
         FROM companies
@@ -514,7 +510,6 @@ def build_weekly_page(db_path: str) -> str:
 
     norms = [r[1] for r in new_cos if r[1]]
 
-    # Map employer_norm -> (title, link, salary, requirements)
     sample_job_by_norm: Dict[str, Tuple[str, str, str, str]] = {}
 
     if norms:
@@ -529,7 +524,6 @@ def build_weekly_page(db_path: str) -> str:
         """, [start_s, end_excl] + norms).fetchall()
 
         for employer_norm, job_title, apply_link, salary, reqs, _d in rows:
-            # keep the most-recent job as the "sample"
             if employer_norm not in sample_job_by_norm:
                 sample_job_by_norm[employer_norm] = (
                     job_title or "",
@@ -538,9 +532,6 @@ def build_weekly_page(db_path: str) -> str:
                     reqs or "",
                 )
 
-    # ---------------------------------------
-    # Top hiring companies this week
-    # ---------------------------------------
     raw_top = conn.execute(f"""
         SELECT employer_name, employer_norm, COUNT(DISTINCT job_id) AS cnt
         FROM jobs
@@ -565,10 +556,9 @@ def build_weekly_page(db_path: str) -> str:
 
     body += render_stats_grid(
         week_stats,
-        extra_note="Weekly tab stats are sums of the daily run stats over the week (true API-returned counts)."
+        extra_note="Weekly tab stats are sums of the daily run stats over the FULLY COMPLETED week (true API-returned counts)."
     )
 
-    # ✅ New companies FIRST, with Sample Job + Salary + Requirements
     body += """
       <h3 style="margin-top:22px;">New companies detected (this week)</h3>
       <table>
@@ -606,11 +596,10 @@ def build_weekly_page(db_path: str) -> str:
             body += f"<td>{reqs}</td>"
             body += "</tr>"
     else:
-        body += "<tr><td colspan='6'>No new companies this week yet.</td></tr>"
+        body += "<tr><td colspan='6'>No new companies in that completed week.</td></tr>"
 
     body += "</tbody></table>"
 
-    # Top hiring SECOND (unchanged)
     body += """
       <h3 style="margin-top:22px;">Hiring companies (this week)</h3>
 
@@ -622,22 +611,13 @@ def build_weekly_page(db_path: str) -> str:
         for i, (company, cnt) in enumerate(top, start=1):
             body += f"<tr><td>{i}</td><td>{company}</td><td>{cnt}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No data for this week yet.</td></tr>"
+        body += "<tr><td colspan='3'>No data for that completed week.</td></tr>"
     body += "</tbody></table>"
 
     return html_shell("MoCo Hiring Monitor — Weekly", "weekly", meta, body)
-def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: str) -> str:
-    """
-    Weekly sector pages:
-      - same 4 stats tiles (tab-specific)
-      - top hiring companies in sector (this week)
-      - new companies in sector (this week)
-      - recent jobs in sector (this week)
 
-    FIX:
-      - apply weekly exclusions by employer_norm at query-time
-      - keep token-safe tag matching LIKE '%,tag,%'
-    """
+
+def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: str) -> str:
     now = utc_now_iso()
     meta = f'{pill("Last updated")} {now} &nbsp; {pill("Sector")} <code>{field_tag}</code>'
 
@@ -646,8 +626,8 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         body = f"<h2>{title}</h2><p>No database found yet. Run at least one daily scan.</p>"
         return html_shell(f"MoCo Hiring Monitor — {title}", active, meta, body)
 
-    today = date.today()
-    start, end = sunday_to_saturday_range(today)
+    # ✅ MOST RECENT FULL WEEK (Sun–Sat)
+    start, end = last_completed_week_range_utc()
     start_s = start.isoformat()
     end_excl = (end + timedelta(days=1)).isoformat()
 
@@ -658,7 +638,6 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
     excl_vals = sorted(EXCLUDE_WEEKLY_NORMS)
     excl_clause, excl_params = _sql_not_in_clause("employer_norm", excl_vals)
 
-    # Top hiring companies in sector this week (exclude by employer_norm)
     top_cos = conn.execute(f"""
         SELECT employer_name, employer_norm, COUNT(DISTINCT job_id) AS cnt
         FROM jobs
@@ -672,7 +651,6 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         LIMIT 3000
     """, [start_s, end_excl, like_tag] + excl_params).fetchall()
 
-    # New companies in sector this week (exclude by employer_norm)
     new_cos = conn.execute(f"""
         SELECT DISTINCT c.employer_name, c.first_seen_run_date, c.places_verified, c.places_address, c.employer_norm
         FROM companies c
@@ -687,7 +665,6 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         LIMIT 250
     """, [start_s, end_excl, start_s, end_excl, like_tag] + excl_params).fetchall()
 
-    # Recent jobs in sector this week (exclude by employer_norm)
     jobs = conn.execute(f"""
         SELECT first_seen_run_date, employer_name, job_title, apply_link, salary, job_requirements, employer_norm
         FROM jobs
@@ -708,7 +685,7 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
 
     body += render_stats_grid(
         stats,
-        extra_note="Sector tab stats count captured jobs tagged to this sector during the week."
+        extra_note="Sector tab stats count captured jobs tagged to this sector during the FULLY COMPLETED week."
     )
 
     body += """
@@ -721,7 +698,7 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         for i, (company, _norm, cnt) in enumerate(top_cos, start=1):
             body += f"<tr><td>{i}</td><td>{company}</td><td>{cnt}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No sector-tagged jobs this week yet.</td></tr>"
+        body += "<tr><td colspan='3'>No sector-tagged jobs in that completed week.</td></tr>"
     body += "</tbody></table>"
 
     body += """
@@ -737,7 +714,7 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
                     ("Verified" if verified else "Unverified") + "</span>"
             body += f"<tr><td>{company}</td><td>{first_seen}</td><td>{badge}</td></tr>"
     else:
-        body += "<tr><td colspan='3'>No new sector companies this week yet.</td></tr>"
+        body += "<tr><td colspan='3'>No new sector companies in that completed week.</td></tr>"
     body += "</tbody></table>"
 
     body += """
@@ -750,14 +727,14 @@ def build_sector_weekly_page(db_path: str, title: str, active: str, field_tag: s
         for d, company, title_txt, url, salary, reqs, _norm in jobs:
             body += f"<tr><td>{d}</td><td>{company}</td><td>{link(title_txt, url)}</td><td>{salary or ''}</td><td>{reqs or ''}</td></tr>"
     else:
-        body += "<tr><td colspan='5'>No jobs for this sector this week yet.</td></tr>"
+        body += "<tr><td colspan='5'>No jobs for that sector in that completed week.</td></tr>"
     body += "</tbody></table>"
 
     return html_shell(f"MoCo Hiring Monitor — {title}", active, meta, body)
 
 
 # ----------------------------
-# Company indicators + "hard to fill" proxy
+# Company indicators + "hard to fill" proxy (unchanged)
 # ----------------------------
 
 def _normalize_company_simple(name: str) -> str:
@@ -973,17 +950,10 @@ def build_company_indicators_page(db_path: str) -> str:
 
 
 # ----------------------------
-# Trends + Search (unchanged behavior)
+# Trends + Search (as you provided)
 # ----------------------------
 
 def build_trends_page(db_path: str) -> str:
-    """
-    Trends page:
-      - Dropdown to select a series for the line graph (requirements + title keywords)
-      - Hover tooltip on the line graph (month + value)
-      - Requirements table (separate)
-      - Title keyword table (separate)
-    """
     now = utc_now_iso()
     meta = f'{pill("Last updated")} {now}'
 
