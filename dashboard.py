@@ -134,7 +134,8 @@ EXCLUDE_WEEKLY_COMPANIES = {
     "montgomery county public schools",
     "mcps",
     "pizza hut",
-    "pizza_hut",
+    "pizza_hut", "Kenwood Autobody", "Goodyear Tire & Rubber Company", 
+    "Autozone", "CVS Health", "Wyndy.com", "MedStar Health", "Aldi", "Trinity Health", "Adventist Healthcare", "Home Depot", "TravelNurseSource", "J.B. Hunt Transport", "Earn Haus"
 }
 
 EXCLUDE_WEEKLY_NORMS = {normalize_company(x) for x in EXCLUDE_WEEKLY_COMPANIES if normalize_company(x)}
@@ -1798,4 +1799,5 @@ def build():
 
 
 if __name__ == "__main__":
+
     build()
