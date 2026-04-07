@@ -135,7 +135,7 @@ EXCLUDE_WEEKLY_COMPANIES = {
     "mcps",
     "pizza hut",
     "pizza_hut", "Kenwood Autobody", "Goodyear Tire & Rubber Company", 
-    "Autozone", "CVS Health", "Wyndy.com", "MedStar Health", "Aldi", "Trinity Health", "Adventist Healthcare", "Home Depot", "TravelNurseSource", "J.B. Hunt Transport", "Earn Haus"
+    "Autozone", "CVS Health", "Wyndy.com", "MedStar Health", "Aldi", "Trinity Health", "Adventist Healthcare", "Home Depot", "TravelNurseSource", "J.B. Hunt Transport", "Earn Haus", "Wendy's", "Salvation Army"
 }
 
 EXCLUDE_WEEKLY_NORMS = {normalize_company(x) for x in EXCLUDE_WEEKLY_COMPANIES if normalize_company(x)}
