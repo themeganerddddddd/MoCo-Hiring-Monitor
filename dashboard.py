@@ -546,7 +546,7 @@ def upsert_company_still_open_monthly(
         int(window_jobs), int(open_now_jobs), int(still_open_jobs), float(rate),
         utc_now_iso(),
     ))
-    conn.commit()
+    # Caller batches dashboard metric writes and commits once.
 
 
 def get_window_job_ids(conn: sqlite3.Connection, employer_norm: str, start_d: date, end_d_inclusive: date) -> Set[str]:
@@ -583,7 +583,7 @@ def ensure_weekly3_table(conn: sqlite3.Connection):
         PRIMARY KEY (week_end, employer_norm)
     );
     """)
-    conn.commit()
+    # Caller batches dashboard metric writes and commits once.
 
 
 def upsert_company_still_open_weekly3(
@@ -1003,10 +1003,6 @@ def build_company_indicators_page(db_path: str) -> str:
     ensure_metrics_table(conn)
     ensure_weekly3_table(conn)
 
-    rapidapi_key = os.getenv("RAPIDAPI_KEY", "").strip()
-    rapidapi_host = os.getenv("RAPIDAPI_HOST", "jsearch.p.rapidapi.com").strip()
-    session = build_retry_session()
-
     today = date.today()
     this_month = today.strftime("%Y-%m")
     first_this = today.replace(day=1)
@@ -1019,6 +1015,12 @@ def build_company_indicators_page(db_path: str) -> str:
     # window for "still open now" check (30-45 days ago)
     window_end = today - timedelta(days=30)
     window_start = today - timedelta(days=45)
+    window_end_exclusive = window_end + timedelta(days=1)
+
+    latest_seen_s = conn.execute("SELECT MAX(first_seen_run_date) FROM jobs").fetchone()[0]
+    latest_seen_day = datetime.strptime(latest_seen_s, "%Y-%m-%d").date() if latest_seen_s else today
+    recent_end = latest_seen_day
+    recent_start = latest_seen_day - timedelta(days=2)
 
     # simple exclusions for indicators page (keep if you want)
     EXCLUDE = set([
@@ -1046,6 +1048,29 @@ def build_company_indicators_page(db_path: str) -> str:
         GROUP BY employer_norm
     """, (last_start.isoformat(), last_end.isoformat())).fetchall()
 
+    window_counts = conn.execute("""
+        SELECT employer_name, employer_norm, COUNT(DISTINCT job_id) AS cnt
+        FROM jobs
+        WHERE first_seen_run_date >= ?
+          AND first_seen_run_date < ?
+          AND employer_name IS NOT NULL AND TRIM(employer_name) <> ''
+        GROUP BY employer_norm
+    """, (window_start.isoformat(), window_end_exclusive.isoformat())).fetchall()
+
+    existing_month_metrics = {}
+    for en, name, wjobs, open_now, still_open, rate in conn.execute("""
+        SELECT employer_norm, employer_name, window_jobs, open_now_jobs, still_open_jobs, still_open_rate
+        FROM company_still_open_monthly
+        WHERE metric_month = ?
+    """, (this_month,)).fetchall():
+        existing_month_metrics[en] = {
+            "name": name,
+            "window_jobs": int(wjobs or 0),
+            "open_now_jobs": int(open_now or 0),
+            "still_open_jobs": int(still_open or 0),
+            "still_open_rate": float(rate or 0.0),
+        }
+
     # maps by norm (stable)
     this_map = {}
     for name, en, cnt in this_counts:
@@ -1059,9 +1084,22 @@ def build_company_indicators_page(db_path: str) -> str:
             continue
         last_map[en] = int(cnt or 0)
 
-    # top N by this month captured postings
+    window_map = {}
+    for name, en, cnt in window_counts:
+        if norm_simple(name) in EXCLUDE:
+            continue
+        window_map[en] = {"name": name, "window_cnt": int(cnt or 0)}
+
+    # The hard-to-fill proxy starts from older postings, not this month's biggest employers.
     TOP_N = int(os.getenv("INDICATORS_TOP_N", "50"))
-    companies_sorted = sorted(this_map.items(), key=lambda x: x[1]["cnt"], reverse=True)[:TOP_N]
+    candidate_map = dict(window_map)
+    if not candidate_map:
+        candidate_map = {en: {"name": obj["name"], "window_cnt": 0} for en, obj in this_map.items()}
+    companies_sorted = sorted(
+        candidate_map.items(),
+        key=lambda x: (x[1]["window_cnt"], this_map.get(x[0], {}).get("cnt", 0)),
+        reverse=True,
+    )
 
     def top_titles_for_norm(employer_norm: str, start_d: date, end_d: date) -> List[str]:
         rows = conn.execute("""
@@ -1077,42 +1115,85 @@ def build_company_indicators_page(db_path: str) -> str:
         """, (employer_norm, start_d.isoformat(), end_d.isoformat())).fetchall()
         return [r[0] for r in rows]
 
-    table_rows = []
+    def norm_title(title: str) -> str:
+        s = (title or "").strip().lower()
+        s = re.sub(r"[^\w\s&/+-]", " ", s)
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
 
+    def title_counts_by_company(start_d: date, end_d_inclusive: date) -> Dict[str, Dict[str, int]]:
+        end_excl = (end_d_inclusive + timedelta(days=1)).isoformat()
+        rows = conn.execute("""
+            SELECT employer_norm, job_title, COUNT(DISTINCT job_id) AS cnt
+            FROM jobs
+            WHERE first_seen_run_date >= ?
+              AND first_seen_run_date < ?
+              AND employer_norm IS NOT NULL AND TRIM(employer_norm) <> ''
+              AND job_title IS NOT NULL AND TRIM(job_title) <> ''
+              AND job_id IS NOT NULL AND TRIM(job_id) <> ''
+            GROUP BY employer_norm, job_title
+        """, (start_d.isoformat(), end_excl)).fetchall()
+        out: Dict[str, Dict[str, int]] = {}
+        for employer_norm, title, cnt in rows:
+            key = norm_title(title)
+            if not key:
+                continue
+            company_counts = out.setdefault(employer_norm, {})
+            company_counts[key] = company_counts.get(key, 0) + int(cnt or 0)
+        return out
+
+    def job_counts_by_company(start_d: date, end_d_inclusive: date) -> Dict[str, int]:
+        end_excl = (end_d_inclusive + timedelta(days=1)).isoformat()
+        rows = conn.execute("""
+            SELECT employer_norm, COUNT(DISTINCT job_id) AS cnt
+            FROM jobs
+            WHERE first_seen_run_date >= ?
+              AND first_seen_run_date < ?
+              AND employer_norm IS NOT NULL AND TRIM(employer_norm) <> ''
+              AND job_id IS NOT NULL AND TRIM(job_id) <> ''
+            GROUP BY employer_norm
+        """, (start_d.isoformat(), end_excl)).fetchall()
+        return {employer_norm: int(cnt or 0) for employer_norm, cnt in rows}
+
+    def title_overlap_count(old_titles: Dict[str, int], recent_titles: Dict[str, int]) -> int:
+        return sum(min(old_count, recent_titles.get(title_key, 0)) for title_key, old_count in old_titles.items())
+
+    recent_title_counts = title_counts_by_company(recent_start, recent_end)
+    recent_job_counts = job_counts_by_company(recent_start, recent_end)
+    window_title_counts = title_counts_by_company(window_start, window_end)
+    window_job_counts = job_counts_by_company(window_start, window_end)
+
+    weekly_title_counts = {}
+    weekly_job_counts = {}
     weeks3 = last_n_completed_weeks(today, 3)  # newest first
+    for w_start, w_end in weeks3:
+        weekly_title_counts[w_end] = title_counts_by_company(w_start, w_end)
+        weekly_job_counts[w_end] = job_counts_by_company(w_start, w_end)
+
+    def recent_title_overlap_for_norm(employer_norm: str, old_titles_by_company: Dict[str, Dict[str, int]]) -> Tuple[int, int]:
+        old_titles = old_titles_by_company.get(employer_norm, {})
+        recent_titles = recent_title_counts.get(employer_norm, {})
+        overlap = sum(min(old_count, recent_titles.get(title_key, 0)) for title_key, old_count in old_titles.items())
+        recent_total = recent_job_counts.get(employer_norm, 0)
+        return overlap, recent_total
+
+    table_rows = []
 
     for employer_norm, obj in companies_sorted:
         company = obj["name"]
-        this_cnt = obj["cnt"]
+        this_cnt = int(this_map.get(employer_norm, {}).get("cnt", 0))
         last_cnt = last_map.get(employer_norm, 0)
 
         pct_change = "NA"
         if last_cnt and last_cnt > 0:
             pct_change = f"{((this_cnt - last_cnt) / last_cnt) * 100:.1f}%"
 
-        titles_this = top_titles_for_norm(employer_norm, this_start, this_end)
-        titles_last = top_titles_for_norm(employer_norm, last_start, last_end)
-
         # --- still-open metric ---
-        window_ids = get_window_job_ids(conn, employer_norm, window_start, window_end)
-        open_now_ids = fetch_open_job_ids_for_company(
-            company,
-            rapidapi_key,
-            rapidapi_host,
-            session=session,
-            max_pages=6,
-            per_call_sleep_s=0.25,
-            connect_timeout_s=10,
-            read_timeout_s=90,
-        ) if rapidapi_key else set()
-
-        still_open = window_ids.intersection(open_now_ids)
-        still_open_count = len(still_open)
-        window_total = len(window_ids)
-        open_now_total = len(open_now_ids)
+        window_total = window_job_counts.get(employer_norm, 0)
+        still_open_count, open_now_total = recent_title_overlap_for_norm(employer_norm, window_title_counts)
         still_open_rate = (still_open_count / window_total) if window_total > 0 else 0.0
 
-        # persist month snapshot (updates daily within month)
+        # Persist the latest local 3-day proxy snapshot.
         upsert_company_still_open_monthly(
             conn,
             metric_month=this_month,
@@ -1125,10 +1206,8 @@ def build_company_indicators_page(db_path: str) -> str:
             still_open_jobs=still_open_count,
         )
 
-        # persist last 3 completed week snapshots (updates daily)
         for w_start, w_end in weeks3:
-            w_ids = get_window_job_ids(conn, employer_norm, w_start, w_end)
-            w_still_open = w_ids.intersection(open_now_ids)
+            w_still_open_count, w_recent_total = recent_title_overlap_for_norm(employer_norm, weekly_title_counts[w_end])
             upsert_company_still_open_weekly3(
                 conn,
                 week_end=w_end,
@@ -1136,23 +1215,50 @@ def build_company_indicators_page(db_path: str) -> str:
                 employer_name=company,
                 window_start=w_start,
                 window_end=w_end,
-                window_jobs=len(w_ids),
-                open_now_jobs=open_now_total,
-                still_open_jobs=len(w_still_open),
+                window_jobs=weekly_job_counts[w_end].get(employer_norm, 0),
+                open_now_jobs=w_recent_total,
+                still_open_jobs=w_still_open_count,
             )
 
         table_rows.append({
+            "employer_norm": employer_norm,
             "company": company,
             "this_cnt": this_cnt,
             "last_cnt": last_cnt if last_cnt else "NA",
             "pct": pct_change,
-            "titles_this": ", ".join(titles_this) if titles_this else "",
-            "titles_last": ", ".join(titles_last) if titles_last else "",
+            "titles_this": "",
+            "titles_last": "",
             "open_now": open_now_total,
             "window_total": window_total,
             "still_open": still_open_count,
+            "still_open_rate_value": still_open_rate,
             "still_open_rate": f"{still_open_rate*100:.1f}%" if window_total > 0 else "NA",
         })
+
+    table_rows.sort(
+        key=lambda x: (x["still_open"], x["still_open_rate_value"], x["window_total"], x["this_cnt"]),
+        reverse=True,
+    )
+
+    activity_candidates = [
+        r for r in table_rows
+        if r["window_total"] > 0 and r["open_now"] > 0
+    ]
+    activity_candidates.sort(
+        key=lambda x: (x["open_now"], x["window_total"], x["still_open"], x["this_cnt"]),
+        reverse=True,
+    )
+    activity_candidates = activity_candidates[:30]
+
+    table_rows = table_rows[:TOP_N]
+
+    for r in table_rows:
+        titles_this = top_titles_for_norm(r["employer_norm"], this_start, this_end)
+        titles_last = top_titles_for_norm(r["employer_norm"], last_start, last_end)
+        r["titles_this"] = ", ".join(titles_this) if titles_this else ""
+        r["titles_last"] = ", ".join(titles_last) if titles_last else ""
+
+    conn.commit()
 
     persisted_cnt = conn.execute("""
         SELECT COUNT(*)
@@ -1179,7 +1285,7 @@ def build_company_indicators_page(db_path: str) -> str:
         so = int(so or 0)
         rate = float(rate or 0.0)
 
-        if wjobs >= 3 and (so >= 5 or rate >= 0.5):
+        if wjobs > 0 and so > 0:
             month_candidates.append({
                 "company": name,
                 "window": f"{ws} to {we}",
@@ -1188,7 +1294,7 @@ def build_company_indicators_page(db_path: str) -> str:
                 "rate": rate
             })
 
-    month_candidates.sort(key=lambda x: (x["still_open"], x["rate"]), reverse=True)
+    month_candidates.sort(key=lambda x: (x["still_open"], x["rate"], x["window_jobs"]), reverse=True)
     month_candidates = month_candidates[:30]
 
     weekly_rows = []
@@ -1236,7 +1342,7 @@ def build_company_indicators_page(db_path: str) -> str:
                     "avg_rate": avg_rate,
                 })
 
-    trend_candidates.sort(key=lambda x: (x["r_new"], x["delta"]), reverse=True)
+    trend_candidates.sort(key=lambda x: (x["so_new"], x["r_new"], x["delta"], x["avg_rate"]), reverse=True)
     trend_candidates = trend_candidates[:30]
 
     def pct_fmt(x):
@@ -1247,31 +1353,30 @@ def build_company_indicators_page(db_path: str) -> str:
     body = f"""
       <h2>Company Indicators</h2>
 
-      <h3 style="margin-top:10px;">Companies with hiring delays</h3>
+      <h3 style="margin-top:10px;">Old postings still open</h3>
       <p class="muted">
-        “Hiring delays” = postings first seen earlier that appear to still be open now
-        (same <code>job_id</code> overlap with current JSearch results).
+        "Still open" = older postings whose same company and same title also appear in the latest 3 stored days.
       </p>
 
       <div class="two-col">
 
         <div class="card">
-          <h3>Month snapshot — {this_month}</h3>
+          <h3>Month snapshot - {this_month}</h3>
           <table>
             <thead>
               <tr>
                 <th>Company</th>
-                <th>Window</th>
-                <th>Window jobs</th>
                 <th>Still open</th>
                 <th>Rate</th>
+                <th>Total jobs</th>
+                <th>Window</th>
               </tr>
             </thead>
             <tbody>
               {''.join([
-                f"<tr><td>{r['company']}</td><td>{r['window']}</td><td>{r['window_jobs']}</td><td>{r['still_open']}</td><td>{pct_fmt(r['rate'])}</td></tr>"
+                f"<tr><td>{r['company']}</td><td>{r['still_open']}</td><td>{pct_fmt(r['rate'])}</td><td>{r['window_jobs']}</td><td>{r['window']}</td></tr>"
                 for r in month_candidates
-              ]) if month_candidates else "<tr><td colspan='5'>No flagged companies this month.</td></tr>"}
+              ]) if month_candidates else "<tr><td colspan='5'>No companies with still-open postings this month.</td></tr>"}
             </tbody>
           </table>
         </div>
@@ -1282,23 +1387,44 @@ def build_company_indicators_page(db_path: str) -> str:
             <thead>
               <tr>
                 <th>Company</th>
-                <th>Newest week</th>
                 <th>Newest still open</th>
                 <th>Newest rate</th>
-                <th>Δ rate</th>
+                <th>Newest week</th>
                 <th>Avg rate</th>
               </tr>
             </thead>
             <tbody>
               {''.join([
-                f"<tr><td>{t['company']}</td><td>{t['week_new']}</td><td>{t['so_new']} / {t['w_new']}</td><td>{pct_fmt(t['r_new'])}</td><td>{pct_fmt(t['delta'])}</td><td>{pct_fmt(t['avg_rate'])}</td></tr>"
+                f"<tr><td>{t['company']}</td><td>{t['so_new']} / {t['w_new']}</td><td>{pct_fmt(t['r_new'])}</td><td>{t['week_new']}</td><td>{pct_fmt(t['avg_rate'])}</td></tr>"
                 for t in trend_candidates
-              ]) if trend_candidates else "<tr><td colspan='6'>No 3-week delay trends yet.</td></tr>"}
+              ]) if trend_candidates else "<tr><td colspan='5'>No 3-week delay trends yet.</td></tr>"}
             </tbody>
           </table>
         </div>
 
       </div>
+
+      <h3 style="margin-top:22px;">Old postings plus recent activity</h3>
+      <p class="muted">
+        Companies with jobs captured 30-45 days ago and any jobs captured again in the latest 3 stored days.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Jobs seen last 3 days</th>
+            <th>Total jobs 30-45d ago</th>
+            <th>Same-title repeats</th>
+            <th>Repeat rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {''.join([
+            f"<tr><td>{r['company']}</td><td>{r['open_now']}</td><td>{r['window_total']}</td><td>{r['still_open']}</td><td>{r['still_open_rate']}</td></tr>"
+            for r in activity_candidates
+          ]) if activity_candidates else "<tr><td colspan='5'>No companies had both old postings and jobs in the latest 3 stored days.</td></tr>"}
+        </tbody>
+      </table>
 
       <hr style="margin:22px 0; border:none; border-top:1px solid #eee;" />
 
@@ -1308,8 +1434,9 @@ def build_company_indicators_page(db_path: str) -> str:
 
       <div class="hint small">
         <b>Hard-to-fill proxy (updated):</b><br/>
-        For each company, we take job IDs captured <b>{window_start.isoformat()}</b> to <b>{window_end.isoformat()}</b> (30–45 days ago),
-        then query JSearch for the company’s open jobs “now” and count the overlap by <code>job_id</code>.<br/>
+        For each company, we take jobs captured <b>{window_start.isoformat()}</b> to <b>{window_end.isoformat()}</b> (30-45 days ago),
+        then compare their normalized titles against jobs captured <b>{recent_start.isoformat()}</b> to <b>{recent_end.isoformat()}</b>
+        (latest 3 stored days).<br/>
         Saved to DB table: <code>company_still_open_monthly</code> (rows this month so far: <b>{persisted_cnt}</b>).
       </div>
 
@@ -1317,14 +1444,15 @@ def build_company_indicators_page(db_path: str) -> str:
         <thead>
           <tr>
             <th>Company</th>
+            <th>Still open</th>
+            <th>Total jobs 30-45d ago</th>
+            <th>Still open rate</th>
+            <th>Jobs seen last 3 days</th>
             <th>{this_month} unique postings (captured)</th>
             <th>{last_month} unique postings (captured)</th>
             <th>% change</th>
             <th>Top titles ({this_month})</th>
             <th>Top titles ({last_month})</th>
-            <th>Jobs captured 30 – 45d ago</th>
-            <th>Jobs Still Open 30 - 45 days later (overlap)</th>
-            <th>Jobs Still Open rate</th>
           </tr>
         </thead>
         <tbody>
@@ -1335,14 +1463,15 @@ def build_company_indicators_page(db_path: str) -> str:
             body += (
                 "<tr>"
                 f"<td>{r['company']}</td>"
+                f"<td>{r['still_open']}</td>"
+                f"<td>{r['window_total']}</td>"
+                f"<td>{r['still_open_rate']}</td>"
+                f"<td>{r['open_now']}</td>"
                 f"<td>{r['this_cnt']}</td>"
                 f"<td>{r['last_cnt']}</td>"
                 f"<td>{r['pct']}</td>"
                 f"<td>{r['titles_this']}</td>"
                 f"<td>{r['titles_last']}</td>"
-                f"<td>{r['window_total']}</td>"
-                f"<td>{r['still_open']}</td>"
-                f"<td>{r['still_open_rate']}</td>"
                 "</tr>"
             )
     else:
@@ -1355,8 +1484,8 @@ def build_company_indicators_page(db_path: str) -> str:
       <div class="hint small">
         Notes:
         <ul>
-          <li>This measures “same posting still open” (same <code>job_id</code>). Re-posted roles with new IDs won’t count as still-open.</li>
-          <li>“Open jobs now” is approximate; large employers may require more paging to fully capture.</li>
+          <li>This is a local 3-day proxy using same company + normalized job title, not a live check of the exact same <code>job_id</code>.</li>
+          <li>Exact still-open status requires live JSearch checks or storing repeat sightings during daily runs.</li>
         </ul>
       </div>
     """
