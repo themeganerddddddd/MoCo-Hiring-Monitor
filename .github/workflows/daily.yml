@@ -2,7 +2,11 @@ name: Daily MoCo Hiring Monitor
 
 on:
   schedule:
-    - cron: "22 22 * * *"  # 10:15 UTC daily (5:15am ET)
+    # Runs at 11:30 PM EDT or 10:30 PM EST.
+    # The rolling one-week search catches jobs missed by delayed runs.
+    - cron: "30 3 * * *"
+
+  # This lets you run the monitor manually from the GitHub Actions page.
   workflow_dispatch:
 
 permissions:
@@ -11,6 +15,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +37,7 @@ jobs:
         run: |
           python monitor.py daily
 
-      - name: Retag fields (keeps Search + weekly tags accurate)
+      - name: Retag fields
         env:
           DB_PATH: ./data/moco_jobs.sqlite
         run: |
@@ -49,7 +54,7 @@ jobs:
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           RAPIDAPI_HOST: jsearch.p.rapidapi.com
           DB_PATH: ./data/moco_jobs.sqlite
-          INDICATORS_TOP_N: "50"   # increase if your quota allows, e.g. "100"
+          INDICATORS_TOP_N: "50"
         run: |
           python dashboard.py
 
@@ -57,7 +62,9 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
           git add data outputs docs
+
           git commit -m "Daily update" || echo "No changes"
 
           git push
