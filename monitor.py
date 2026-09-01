@@ -408,6 +408,416 @@ def derive_fields(job: Dict[str, Any]) -> str:
         "dental", "hygienist", "hospital"
     ]
 
+    life_exclude_words = ["rn", "cna"]# monitor.py
+import os
+import re
+import json
+import csv
+import time
+import sqlite3
+import argparse
+import random
+from dataclasses import dataclass
+from datetime import datetime, date, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+import yaml
+from dotenv import load_dotenv
+from shapely.geometry import shape, Point
+
+JSEARCH_SEARCH_URL = "https://jsearch.p.rapidapi.com/search"
+
+# Put your file at one of these paths in the repo:
+LOCAL_MD_COUNTIES_PATHS = [
+    "./data/maryland-counties.geojson",
+    "./maryland-counties.geojson",
+]
+
+# Cache just Montgomery County geometry here (created automatically)
+MOCO_CACHE_PATH = "./data/moco_boundary.geojson"
+
+
+def utc_now_iso() -> str:
+    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+
+def ensure_dirs():
+    os.makedirs("./data", exist_ok=True)
+    os.makedirs("./outputs", exist_ok=True)
+    os.makedirs("./docs", exist_ok=True)
+
+
+def normalize_company(name: str) -> str:
+    if not name:
+        return ""
+    s = name.strip().lower()
+    s = re.sub(r"[^\w\s&-]", "", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    suffixes = [" inc", " llc", " ltd", " co", " corporation", " corp", " company", " incorporated", " limited"]
+    for suf in suffixes:
+        if s.endswith(suf):
+            s = s[: -len(suf)].strip()
+    return s
+
+
+def safe_get(d: Dict[str, Any], keys: List[str], default=None):
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    return default
+
+
+def parse_job_posted_at(job: Dict[str, Any]) -> Optional[str]:
+    v = safe_get(
+        job,
+        keys=[
+            "job_posted_at_datetime_utc",
+            "job_posted_at_datetime",
+            "job_posted_at",
+            "job_posted_at_timestamp",
+        ],
+        default=None,
+    )
+    if v is None:
+        return None
+    return str(v)
+
+
+def _find_local_md_geojson_path() -> Optional[str]:
+    for p in LOCAL_MD_COUNTIES_PATHS:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _extract_moco_feature(gj: Dict[str, Any]) -> Dict[str, Any]:
+    moco_feat = None
+    for feat in gj.get("features", []):
+        props = feat.get("properties", {}) or {}
+        candidate = (
+            props.get("NAME")
+            or props.get("name")
+            or props.get("County")
+            or props.get("county")
+            or ""
+        )
+        name = str(candidate).strip().lower()
+        if name == "montgomery":
+            moco_feat = feat
+            break
+
+    if not moco_feat:
+        sample = gj.get("features", [{}])[0].get("properties", {}) if gj.get("features") else {}
+        raise RuntimeError(
+            "Could not find Montgomery County in your maryland-counties.geojson.\n"
+            f"Checked keys NAME/name/County/county. Sample property keys: {list(sample.keys())}"
+        )
+    return moco_feat
+
+
+def load_moco_polygon() -> Any:
+    """
+    Loads LOCAL Maryland counties GeoJSON, extracts Montgomery County,
+    caches it to ./data/moco_boundary.geojson, and returns Shapely geometry.
+    """
+    ensure_dirs()
+
+    # If cached, load cache
+    if os.path.exists(MOCO_CACHE_PATH):
+        with open(MOCO_CACHE_PATH, "r", encoding="utf-8") as f:
+            feat = json.load(f)
+        return shape(feat["geometry"])
+
+    local_path = _find_local_md_geojson_path()
+    if not local_path:
+        raise RuntimeError(
+            "Missing local Maryland counties GeoJSON.\n"
+            "Place it at one of:\n"
+            "  - ./data/maryland-counties.geojson (recommended)\n"
+            "  - ./maryland-counties.geojson\n"
+        )
+
+    with open(local_path, "r", encoding="utf-8") as f:
+        gj = json.load(f)
+
+    moco_feat = _extract_moco_feature(gj)
+
+    with open(MOCO_CACHE_PATH, "w", encoding="utf-8") as f:
+        json.dump(moco_feat, f)
+
+    return shape(moco_feat["geometry"])
+
+
+def is_job_in_moco(job: Dict[str, Any], moco_geom: Any) -> bool:
+    lat = job.get("job_latitude")
+    lon = job.get("job_longitude")
+
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        pt = Point(float(lon), float(lat))
+        return moco_geom.contains(pt)
+
+    city = str(job.get("job_city") or "").lower()
+    state = str(job.get("job_state") or "").lower()
+    loc = str(job.get("job_location") or "").lower()
+
+    moco_cities = [
+        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
+        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
+    ]
+
+    if state == "md" and any(c in city for c in moco_cities):
+        return True
+
+    if "montgomery county" in loc and "md" in loc:
+        return True
+
+    return False
+
+
+def places_text_search(company_name: str, google_places_key: str) -> Optional[Dict[str, Any]]:
+    if not google_places_key:
+        return None
+
+    q = f"{company_name} Montgomery County MD"
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {"query": q, "key": google_places_key}
+
+    try:
+        # keep places timeouts reasonable
+        r = requests.get(url, params=params, timeout=(10, 20))
+        r.raise_for_status()
+        payload = r.json()
+        results = payload.get("results") or []
+        if not results:
+            return None
+        return results[0]
+    except Exception:
+        return None
+
+
+def verify_company_with_places(company_name: str, moco_geom: Any, google_places_key: str) -> Dict[str, Any]:
+    if not google_places_key:
+        return {"verified": False, "place_id": "", "address": "", "lat": None, "lon": None, "reason": "no_places_key"}
+
+    top = places_text_search(company_name, google_places_key)
+    if not top:
+        return {"verified": False, "place_id": "", "address": "", "lat": None, "lon": None, "reason": "no_places_match"}
+
+    place_id = str(top.get("place_id") or "")
+    address = str(top.get("formatted_address") or "")
+    geom = (top.get("geometry") or {}).get("location") or {}
+    lat = geom.get("lat")
+    lon = geom.get("lng")
+
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        pt = Point(float(lon), float(lat))
+        if moco_geom.contains(pt):
+            return {"verified": True, "place_id": place_id, "address": address, "lat": float(lat), "lon": float(lon), "reason": "inside_moco"}
+        return {"verified": False, "place_id": place_id, "address": address, "lat": float(lat), "lon": float(lon), "reason": "outside_moco"}
+
+    return {"verified": False, "place_id": place_id, "address": address, "lat": None, "lon": None, "reason": "no_latlon"}
+
+
+# ----------------------------
+# Reliability: retries + bumps
+# ----------------------------
+
+def build_retry_session() -> requests.Session:
+    """
+    Requests session with retries + exponential backoff for transient RapidAPI issues.
+    Retries on: timeouts, 429, and common 5xx.
+    """
+    retry = Retry(
+        total=6,
+        connect=6,
+        read=6,
+        backoff_factor=1.5,  # 0s, 1.5s, 3s, 6s, 12s...
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    s = requests.Session()
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
+
+
+# ----------------------------
+# NEW: derived metadata fields
+# ----------------------------
+
+def extract_salary_text(job: Dict[str, Any]) -> str:
+    """
+    Attempts to extract a human-readable salary string from common fields.
+    If missing, returns empty string.
+    """
+    formatted = safe_get(job, ["job_salary", "salary", "job_salary_range", "job_salary_formatted"], "")
+    if formatted:
+        return str(formatted).strip()
+
+    min_sal = safe_get(job, ["job_min_salary", "job_salary_min", "min_salary"], None)
+    max_sal = safe_get(job, ["job_max_salary", "job_salary_max", "max_salary"], None)
+    currency = str(safe_get(job, ["job_salary_currency", "salary_currency", "currency"], "") or "").strip()
+    period = str(safe_get(job, ["job_salary_period", "salary_period"], "") or "").strip()  # YEAR, HOUR, etc.
+
+    if min_sal is None and max_sal is None:
+        return ""
+
+    core = ""
+    if min_sal is not None and max_sal is not None:
+        core = f"{min_sal}-{max_sal}"
+    elif min_sal is not None:
+        core = f"{min_sal}+"
+    else:
+        core = f"up to {max_sal}"
+
+    tail = " ".join([currency, period]).strip()
+    return f"{core} {tail}".strip()
+
+
+def derive_job_requirements(job: Dict[str, Any]) -> str:
+    """
+    Returns comma-delimited list of:
+      under_3_years_experience, more_than_3_years_experience, no_experience, no_degree
+    Uses simple heuristics on title/description/highlights if present.
+    """
+    title = str(job.get("job_title") or "").lower()
+    desc = str(safe_get(job, ["job_description", "job_highlights", "job_summary"], "") or "").lower()
+    text = f"{title}\n{desc}"
+
+    tags = set()
+
+    if any(k in text for k in [
+        "no degree", "no-degree", "no diploma", "no diploma required",
+        "high school or equivalent", "high school diploma or equivalent"
+    ]):
+        tags.add("no_degree")
+
+    if any(k in text for k in [
+        "no experience", "entry level", "entry-level", "0 years", "zero years",
+        "training provided", "no prior experience"
+    ]):
+        tags.add("no_experience")
+
+    if any(k in text for k in [
+        "1 year", "one year", "2 years", "two years", "1-2 years", "2+ years"
+    ]):
+        tags.add("under_3_years_experience")
+
+    if any(k in text for k in [
+        "3 years", "3+ years", "four years", "4 years", "5 years", "6 years",
+        "7 years", "8 years", "10 years", "5+ years"
+    ]):
+        tags.add("more_than_3_years_experience")
+
+    if "more_than_3_years_experience" in tags and "under_3_years_experience" in tags:
+        tags.discard("under_3_years_experience")
+
+    return ",".join(sorted(tags))
+
+
+def derive_fields(job: Dict[str, Any]) -> str:
+    title = str(job.get("job_title") or "").lower()
+    desc_raw = safe_get(job, ["job_description", "job_highlights", "job_summary"], "")
+    desc = str(desc_raw or "").lower()
+    employer = str(job.get("employer_name") or "").lower()
+
+    text = f"{title}\n{desc}\n{employer}"
+    text = re.sub(r"[^a-z0-9+\s/.-]", " ", text.lower())
+    text = re.sub(r"\s+", " ", text).strip()
+
+    tags = set()
+
+    def has_phrase(p: str) -> bool:
+        return p in text
+
+    def has_word(w: str) -> bool:
+        return re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", text) is not None
+
+    # ----------------------------
+    # TECHNOLOGY
+    # ----------------------------
+
+    tech_phrases = [
+        "software", "developer", "machine learning", "cloud",
+        "cybersecurity", "devops", "full stack", "fullstack",
+        "backend", "frontend", "data engineer", "data scientist",
+        "database", "network engineer", "systems engineer",
+        "sre", "programmer",
+        "aws", "azure", "gcp", "cyber",
+        "python", "java", "javascript", "typescript", "react", "sql",
+        "system administrator"
+    ]
+
+    tech_words = ["ai", "ml", "api", "etl"]
+
+    tech_exclude_phrases = [
+        "automotive technician",
+        "maintenance technician",
+        "service technician",
+        "hvac technician",
+        "repair technician",
+        "field technician",
+        "pharmacy technician",
+        "nail technician",
+        "behavior technician",
+        "veterinary technician",
+        "medical technician",
+        "lab technician",
+        "manufacturing technician",
+        "it support",
+        "help desk",
+        "desktop support",
+        "computer teacher",
+        "technology teacher",
+        "educational technology",
+    ]
+
+    tech_exclude_words = [
+        "custodian",
+        "janitor",
+        "plumber",
+        "electrician",
+        "mechanic",
+        "installer",
+        "health",
+    ]
+
+    tech_excluded = (
+        any(has_phrase(p) for p in tech_exclude_phrases)
+        or any(has_word(w) for w in tech_exclude_words)
+    )
+
+    tech_hit = (
+        (any(has_phrase(p) for p in tech_phrases) or any(has_word(w) for w in tech_words))
+        and not tech_excluded
+    )
+
+    # ----------------------------
+    # LIFE SCIENCES
+    # ----------------------------
+
+    life_phrases = [
+        "biotech", "bioinformatics", "laboratory", "clinical", "pharma",
+        "assay", "regulatory", "molecular", "genomics", "microbiology",
+        "biologist", "scientist", "chemist", "gene",
+        "therapeutics", "biosciences", "biologics", "diagnostics"
+    ]
+
+    life_words = ["lab", "qc", "qa"]
+
+    life_exclude_phrases = [
+        "nurse", "doctor", "physician", "dentist",
+        "dental", "hygienist", "hospital"
+    ]
+
     life_exclude_words = ["rn", "cna"]
 
     life_excluded = (
@@ -477,8 +887,8 @@ def derive_fields(job: Dict[str, Any]) -> str:
 class JSearchClient:
     rapidapi_key: str
     rapidapi_host: str = "jsearch.p.rapidapi.com"
-    timeout_s: int = 90               # ⬅️ bump read timeout
-    connect_timeout_s: int = 10       # ⬅️ separate connect timeout
+    timeout_s: int = 90               # â¬…ï¸ bump read timeout
+    connect_timeout_s: int = 10       # â¬…ï¸ separate connect timeout
     session: Optional[requests.Session] = None
 
     def __post_init__(self):
@@ -499,9 +909,24 @@ class JSearchClient:
 
         resp = self.session.get(JSEARCH_SEARCH_URL, headers=headers, params=params, timeout=timeout)
         resp.raise_for_status()
-        payload = resp.json()
+        try:
+            payload = resp.json()
+        except ValueError as exc:
+            raise RuntimeError("JSearch returned a non-JSON response") from exc
+
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"JSearch returned an unexpected payload type: {type(payload).__name__}")
+
+        # RapidAPI/provider errors sometimes arrive with HTTP 200. Do not silently
+        # turn those responses into a legitimate zero-job result.
+        if "data" not in payload:
+            detail = payload.get("message") or payload.get("error") or payload.get("status") or "missing data field"
+            raise RuntimeError(f"JSearch response error: {detail}")
+
         data = payload.get("data") or []
-        return data if isinstance(data, list) else []
+        if not isinstance(data, list):
+            raise RuntimeError(f"JSearch returned non-list data: {type(data).__name__}")
+        return data
 
 
 def init_db(conn: sqlite3.Connection):
@@ -694,6 +1119,7 @@ def run_daily(config_path: str):
     jobs_in_moco_count = 0
     new_jobs_count = 0
     new_companies_today = set()
+    query_diagnostics = []
 
     for q in queries:
         q = str(q).strip()
@@ -705,8 +1131,11 @@ def run_daily(config_path: str):
 
         try:
             jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
-        except requests.exceptions.RequestException as e:
+            query_diagnostics.append({"query": q, "status": "ok", "jobs_returned": len(jobs), "error": ""})
+            print(f"[JSEARCH] query={q!r} returned {len(jobs)} jobs")
+        except (requests.exceptions.RequestException, RuntimeError) as e:
             print(f"[WARN] JSearch failed for query={q!r}: {e}. Skipping this query for today.")
+            query_diagnostics.append({"query": q, "status": "error", "jobs_returned": 0, "error": str(e)})
             jobs = []
 
         jobs_scanned_count += len(jobs)
@@ -737,6 +1166,24 @@ def run_daily(config_path: str):
                 new_jobs_count += 1
 
     finished = utc_now_iso()
+
+    diagnostics_path = f"./outputs/jsearch_diagnostics_{run_date}.json"
+    with open(diagnostics_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "run_date": run_date,
+            "started_utc": started,
+            "finished_utc": finished,
+            "date_posted": date_posted,
+            "num_pages": num_pages,
+            "jobs_scanned_count": jobs_scanned_count,
+            "queries": query_diagnostics,
+        }, f, indent=2)
+
+    failed_queries = sum(1 for item in query_diagnostics if item["status"] == "error")
+    if failed_queries:
+        print(f"[ALERT] {failed_queries}/{len(query_diagnostics)} JSearch queries failed; see {diagnostics_path}")
+    elif jobs_scanned_count == 0:
+        print(f"[ALERT] All JSearch queries succeeded but returned zero jobs; see {diagnostics_path}")
 
     conn.execute("""
     INSERT INTO runs (run_date, started_utc, finished_utc, queries_json, jobs_scanned_count, jobs_in_moco_count, new_jobs_count, new_companies_count)
@@ -813,6 +1260,7 @@ def run_daily(config_path: str):
     print(f"  New unique jobs inserted: {new_jobs_count}")
     print(f"  New companies detected today: {len(new_companies_today)}")
     print(f"  Output: {out_path}")
+    print(f"  API diagnostics: {diagnostics_path}")
 
 
 def run_monthly(month: str):
