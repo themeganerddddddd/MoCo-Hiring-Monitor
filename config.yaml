@@ -1,8 +1,8 @@
-# You can tune these after the demo.
-# For daily new-company detection, we mostly care about "fresh" postings.
 daily:
-  date_posted: "today"       # supported values include today/week/month/all :contentReference[oaicite:2]{index=2}
-  num_pages: 2               # IMPORTANT: JSearch supports num_pages; one API call can return multiple pages
+  # Searches the previous week but stores only jobs not already in the database.
+  date_posted: "week"
+  num_pages: 5
+
   queries:
     - "in Montgomery County, MD"
     - "in Rockville, MD"
@@ -10,7 +10,3 @@ daily:
     - "in Silver Spring, MD"
     - "in Gaithersburg, MD"
     - "in Germantown, MD"
-
-monthly:
-  # monthly report is computed from your stored data (no extra API calls required)
-  top_n: 30
