@@ -1,0 +1,46 @@
+{
+  "run_date": "2026-09-01",
+  "started_utc": "2026-09-01T14:36:55Z",
+  "finished_utc": "2026-09-01T14:38:13Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 240,
+  "queries": [
+    {
+      "query": "in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "error": ""
+    },
+    {
+      "query": "in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "error": ""
+    },
+    {
+      "query": "in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "error": ""
+    },
+    {
+      "query": "in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "error": ""
+    },
+    {
+      "query": "in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "error": ""
+    },
+    {
+      "query": "in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "error": ""
+    }
+  ]
+}
