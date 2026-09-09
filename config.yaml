@@ -1,12 +1,28 @@
 daily:
-  # Searches the previous week but stores only jobs not already in the database.
+  # Look back one week so rotating place searches do not miss jobs between runs.
   date_posted: "week"
   num_pages: 5
 
+  # Always run the county-wide query.
   queries:
-    - "in Montgomery County, MD"
-    - "in Rockville, MD"
-    - "in Bethesda, MD"
-    - "in Silver Spring, MD"
-    - "in Gaithersburg, MD"
-    - "in Germantown, MD"
+    - "jobs in Montgomery County, MD"
+
+  # Run only a subset each day. With 5 per run, this whole list cycles every
+  # 3 days while keeping total daily JSearch calls at the same 6 as before.
+  rotating_queries_per_run: 5
+  rotating_queries:
+    - "jobs in Rockville, MD"
+    - "jobs in Bethesda, MD"
+    - "jobs in Silver Spring, MD"
+    - "jobs in Gaithersburg, MD"
+    - "jobs in Germantown, MD"
+    - "jobs in North Bethesda, MD"
+    - "jobs in Montgomery Village, MD"
+    - "jobs in Clarksburg, MD"
+    - "jobs in Wheaton, MD"
+    - "jobs in Olney, MD"
+    - "jobs in Takoma Park, MD"
+    - "jobs in Potomac, MD"
+    - "jobs in Kensington, MD"
+    - "jobs in Burtonsville, MD"
+    - "jobs in Damascus, MD"
