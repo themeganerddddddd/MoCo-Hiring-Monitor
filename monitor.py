@@ -143,26 +143,53 @@ def load_moco_polygon() -> Any:
 
 
 def is_job_in_moco(job: Dict[str, Any], moco_geom: Any) -> bool:
+    """
+    Return True when a posting is confidently inside Montgomery County.
+
+    Prefer provider coordinates when available. If coordinates are missing,
+    fall back to a conservative Maryland + Montgomery County place-name check.
+    JSearch commonly returns job_state as "Maryland", not only "MD".
+    """
     lat = job.get("job_latitude")
     lon = job.get("job_longitude")
 
     if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
         pt = Point(float(lon), float(lat))
-        return moco_geom.contains(pt)
+        # covers() includes points exactly on the county boundary.
+        return moco_geom.covers(pt)
 
-    city = str(job.get("job_city") or "").lower()
-    state = str(job.get("job_state") or "").lower()
-    loc = str(job.get("job_location") or "").lower()
+    city = str(job.get("job_city") or "").strip().lower()
+    state = str(job.get("job_state") or "").strip().lower()
+    loc = str(job.get("job_location") or "").strip().lower()
 
+    maryland_state_values = {"md", "maryland", "maryland, us", "maryland, usa"}
+
+    # Conservative list of Montgomery County municipalities/CDPs/postal place names.
+    # This is only used when coordinates are unavailable.
     moco_cities = [
-        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
-        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
+        "rockville", "bethesda", "north bethesda", "silver spring", "gaithersburg",
+        "germantown", "montgomery village", "clarksburg", "wheaton", "takoma park",
+        "chevy chase", "potomac", "north potomac", "olney", "kensington",
+        "burtonsville", "damascus", "poolesville", "derwood", "aspen hill",
+        "cabin john", "glen echo", "garrett park", "washington grove", "laytonsville",
+        "brookeville", "barnesville", "boyds", "dickerson", "sandy spring",
+        "ashton", "spencerville", "colesville"
     ]
 
-    if state == "md" and any(c in city for c in moco_cities):
+    state_is_md = state in maryland_state_values or state.startswith("maryland")
+    loc_mentions_md = (
+        re.search(r"(^|[\s,])md($|[\s,])", loc) is not None
+        or "maryland" in loc
+    )
+
+    if state_is_md and any(c == city or c in city for c in moco_cities):
         return True
 
-    if "montgomery county" in loc and "md" in loc:
+    if "montgomery county" in loc and loc_mentions_md:
+        return True
+
+    # Some results have a blank job_city but a useful combined job_location.
+    if loc_mentions_md and any(c in loc for c in moco_cities):
         return True
 
     return False
@@ -553,26 +580,53 @@ def load_moco_polygon() -> Any:
 
 
 def is_job_in_moco(job: Dict[str, Any], moco_geom: Any) -> bool:
+    """
+    Return True when a posting is confidently inside Montgomery County.
+
+    Prefer provider coordinates when available. If coordinates are missing,
+    fall back to a conservative Maryland + Montgomery County place-name check.
+    JSearch commonly returns job_state as "Maryland", not only "MD".
+    """
     lat = job.get("job_latitude")
     lon = job.get("job_longitude")
 
     if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
         pt = Point(float(lon), float(lat))
-        return moco_geom.contains(pt)
+        # covers() includes points exactly on the county boundary.
+        return moco_geom.covers(pt)
 
-    city = str(job.get("job_city") or "").lower()
-    state = str(job.get("job_state") or "").lower()
-    loc = str(job.get("job_location") or "").lower()
+    city = str(job.get("job_city") or "").strip().lower()
+    state = str(job.get("job_state") or "").strip().lower()
+    loc = str(job.get("job_location") or "").strip().lower()
 
+    maryland_state_values = {"md", "maryland", "maryland, us", "maryland, usa"}
+
+    # Conservative list of Montgomery County municipalities/CDPs/postal place names.
+    # This is only used when coordinates are unavailable.
     moco_cities = [
-        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
-        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
+        "rockville", "bethesda", "north bethesda", "silver spring", "gaithersburg",
+        "germantown", "montgomery village", "clarksburg", "wheaton", "takoma park",
+        "chevy chase", "potomac", "north potomac", "olney", "kensington",
+        "burtonsville", "damascus", "poolesville", "derwood", "aspen hill",
+        "cabin john", "glen echo", "garrett park", "washington grove", "laytonsville",
+        "brookeville", "barnesville", "boyds", "dickerson", "sandy spring",
+        "ashton", "spencerville", "colesville"
     ]
 
-    if state == "md" and any(c in city for c in moco_cities):
+    state_is_md = state in maryland_state_values or state.startswith("maryland")
+    loc_mentions_md = (
+        re.search(r"(^|[\s,])md($|[\s,])", loc) is not None
+        or "maryland" in loc
+    )
+
+    if state_is_md and any(c == city or c in city for c in moco_cities):
         return True
 
-    if "montgomery county" in loc and "md" in loc:
+    if "montgomery county" in loc and loc_mentions_md:
+        return True
+
+    # Some results have a blank job_city but a useful combined job_location.
+    if loc_mentions_md and any(c in loc for c in moco_cities):
         return True
 
     return False
@@ -1067,6 +1121,22 @@ def insert_job_if_new(conn: sqlite3.Connection, job: Dict[str, Any], search_quer
     fields = f",{raw_fields}," if raw_fields else ""  # stored for LIKE '%,tag,%'
     salary = extract_salary_text(job)
 
+    # JSearch can occasionally surface the same underlying posting with a
+    # different provider job_id. Avoid inserting obvious duplicates when the
+    # employer/title/location/apply URL are identical.
+    if apply_link:
+        semantic_duplicate = conn.execute("""
+            SELECT 1
+            FROM jobs
+            WHERE apply_link = ?
+              AND employer_norm = ?
+              AND job_title = ?
+              AND COALESCE(job_city, '') = ?
+            LIMIT 1
+        """, (apply_link, employer_norm, job_title, city or "")).fetchone()
+        if semantic_duplicate:
+            return False
+
     cur = conn.execute("""
     INSERT OR IGNORE INTO jobs (
         job_id, employer_name, employer_norm, job_title, job_publisher, job_employment_type,
@@ -1104,9 +1174,25 @@ def run_daily(config_path: str):
     daily_cfg = cfg["daily"]
     date_posted = daily_cfg.get("date_posted", "today")
     num_pages = int(daily_cfg.get("num_pages", 1))
-    queries = daily_cfg.get("queries", [])
 
-    run_date = date.today().isoformat()
+    run_day = date.today()
+    run_date = run_day.isoformat()
+
+    queries = list(daily_cfg.get("queries", []) or [])
+    rotating_queries = list(daily_cfg.get("rotating_queries", []) or [])
+    rotating_per_run = int(daily_cfg.get("rotating_queries_per_run", 0) or 0)
+
+    if rotating_queries and rotating_per_run > 0:
+        rotating_per_run = min(rotating_per_run, len(rotating_queries))
+        # Advance by an entire batch each day so the pool cycles cleanly.
+        start_idx = (run_day.toordinal() * rotating_per_run) % len(rotating_queries)
+        selected_rotating = [
+            rotating_queries[(start_idx + i) % len(rotating_queries)]
+            for i in range(rotating_per_run)
+        ]
+        queries.extend(selected_rotating)
+        print(f"[SEARCH PLAN] {len(queries)} queries today; rotating set: {selected_rotating}")
+
     started = utc_now_iso()
 
     moco_geom = load_moco_polygon()
@@ -1129,22 +1215,43 @@ def run_daily(config_path: str):
         # Delay (with a tiny jitter to be nicer to the API + reduce thundering herd)
         time.sleep(api_delay_s + random.uniform(0.0, 0.15))
 
+        q_diag = {
+            "query": q,
+            "status": "ok",
+            "jobs_returned": 0,
+            "jobs_in_moco": 0,
+            "new_jobs_inserted": 0,
+            "new_companies_detected": 0,
+            "rejected_location_samples": [],
+            "error": "",
+        }
+
         try:
             jobs = client.search(query=q, page=1, num_pages=num_pages, date_posted=date_posted, country="us")
-            query_diagnostics.append({"query": q, "status": "ok", "jobs_returned": len(jobs), "error": ""})
+            q_diag["jobs_returned"] = len(jobs)
             print(f"[JSEARCH] query={q!r} returned {len(jobs)} jobs")
         except (requests.exceptions.RequestException, RuntimeError) as e:
             print(f"[WARN] JSearch failed for query={q!r}: {e}. Skipping this query for today.")
-            query_diagnostics.append({"query": q, "status": "error", "jobs_returned": 0, "error": str(e)})
+            q_diag["status"] = "error"
+            q_diag["error"] = str(e)
+            query_diagnostics.append(q_diag)
             jobs = []
 
         jobs_scanned_count += len(jobs)
+        companies_before = len(new_companies_today)
 
         for job in jobs:
             if not is_job_in_moco(job, moco_geom):
+                if len(q_diag["rejected_location_samples"]) < 5:
+                    q_diag["rejected_location_samples"].append({
+                        "city": str(job.get("job_city") or ""),
+                        "state": str(job.get("job_state") or ""),
+                        "location": str(job.get("job_location") or ""),
+                    })
                 continue
 
             jobs_in_moco_count += 1
+            q_diag["jobs_in_moco"] += 1
 
             employer_name = str(job.get("employer_name") or "").strip()
             employer_norm = normalize_company(employer_name)
@@ -1164,6 +1271,19 @@ def run_daily(config_path: str):
 
             if insert_job_if_new(conn, job, search_query=q, run_date=run_date):
                 new_jobs_count += 1
+                q_diag["new_jobs_inserted"] += 1
+
+        q_diag["new_companies_detected"] = len(new_companies_today) - companies_before
+
+        # Error cases were already appended above.
+        if q_diag["status"] == "ok":
+            query_diagnostics.append(q_diag)
+
+        print(
+            f"[FILTER] query={q!r}: "
+            f"{q_diag['jobs_in_moco']}/{q_diag['jobs_returned']} in MoCo, "
+            f"{q_diag['new_jobs_inserted']} new jobs"
+        )
 
     finished = utc_now_iso()
 
@@ -1176,6 +1296,9 @@ def run_daily(config_path: str):
             "date_posted": date_posted,
             "num_pages": num_pages,
             "jobs_scanned_count": jobs_scanned_count,
+            "jobs_in_moco_count": jobs_in_moco_count,
+            "new_jobs_count": new_jobs_count,
+            "new_companies_count": len(new_companies_today),
             "queries": query_diagnostics,
         }, f, indent=2)
 
@@ -1251,6 +1374,45 @@ def run_daily(config_path: str):
         for r in rows:
             w.writerow(r)
 
+    # Build a separate daily new-job CSV so the dashboard/output does not
+    # make an active day look empty just because the employers were already known.
+    daily_job_rows = conn.execute("""
+        SELECT
+            first_seen_run_date,
+            employer_name,
+            job_title,
+            job_city,
+            job_state,
+            MAX(job_posted_at) AS job_posted_at,
+            MAX(job_publisher) AS job_publisher,
+            MAX(job_employment_type) AS job_employment_type,
+            MAX(salary) AS salary,
+            apply_link,
+            MIN(search_query) AS search_query
+        FROM jobs
+        WHERE first_seen_run_date = ?
+        GROUP BY
+            first_seen_run_date,
+            employer_norm,
+            job_title,
+            job_city,
+            job_state,
+            apply_link
+        ORDER BY job_posted_at DESC, employer_name ASC, job_title ASC
+    """, (run_date,)).fetchall()
+
+    jobs_out_path = f"./outputs/new_jobs_{run_date}.csv"
+    jobs_fieldnames = [
+        "run_date", "company", "job_title", "job_city", "job_state",
+        "job_posted_at", "publisher", "employment_type", "salary",
+        "apply_link", "search_query"
+    ]
+    with open(jobs_out_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=jobs_fieldnames)
+        w.writeheader()
+        for row in daily_job_rows:
+            w.writerow(dict(zip(jobs_fieldnames, row)))
+
     conn.close()
 
     print("Daily run complete.")
@@ -1259,7 +1421,8 @@ def run_daily(config_path: str):
     print(f"  Jobs inside MoCo (filtered): {jobs_in_moco_count}")
     print(f"  New unique jobs inserted: {new_jobs_count}")
     print(f"  New companies detected today: {len(new_companies_today)}")
-    print(f"  Output: {out_path}")
+    print(f"  New companies output: {out_path}")
+    print(f"  New jobs output: {jobs_out_path}")
     print(f"  API diagnostics: {diagnostics_path}")
 
 
