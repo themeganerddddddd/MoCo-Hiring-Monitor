@@ -1,45 +1,208 @@
 {
   "run_date": "2026-09-09",
-  "started_utc": "2026-09-09T08:21:09Z",
-  "finished_utc": "2026-09-09T08:22:39Z",
+  "started_utc": "2026-09-09T14:00:23Z",
+  "finished_utc": "2026-09-09T14:01:35Z",
   "date_posted": "week",
   "num_pages": 5,
-  "jobs_scanned_count": 211,
+  "jobs_scanned_count": 257,
+  "jobs_in_moco_count": 105,
+  "new_jobs_count": 98,
+  "new_companies_count": 24,
   "queries": [
     {
-      "query": "in Montgomery County, MD",
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 7,
+      "jobs_in_moco": 6,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "Chantilly",
+          "state": "Virginia",
+          "location": "Chantilly, VA"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
       "status": "ok",
       "jobs_returned": 50,
+      "jobs_in_moco": 8,
+      "new_jobs_inserted": 8,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        }
+      ],
       "error": ""
     },
     {
-      "query": "in Rockville, MD",
-      "status": "ok",
-      "jobs_returned": 8,
-      "error": ""
-    },
-    {
-      "query": "in Bethesda, MD",
+      "query": "jobs in Potomac, MD",
       "status": "ok",
       "jobs_returned": 50,
+      "jobs_in_moco": 33,
+      "new_jobs_inserted": 33,
+      "new_companies_detected": 10,
+      "rejected_location_samples": [
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "Potomac Mills",
+          "state": "Virginia",
+          "location": "Potomac Mills, VA"
+        },
+        {
+          "city": "Kingston",
+          "state": "New York",
+          "location": "Kingston, NY"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "Westminster",
+          "state": "Maryland",
+          "location": "Westminster, MD"
+        }
+      ],
       "error": ""
     },
     {
-      "query": "in Silver Spring, MD",
-      "status": "ok",
-      "jobs_returned": 3,
-      "error": ""
-    },
-    {
-      "query": "in Gaithersburg, MD",
+      "query": "jobs in Kensington, MD",
       "status": "ok",
       "jobs_returned": 50,
+      "jobs_in_moco": 17,
+      "new_jobs_inserted": 17,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        },
+        {
+          "city": "Lanham",
+          "state": "Maryland",
+          "location": "Lanham, MD"
+        },
+        {
+          "city": "White Plains",
+          "state": "Maryland",
+          "location": "White Plains, MD"
+        },
+        {
+          "city": "Annapolis Junction",
+          "state": "Maryland",
+          "location": "Annapolis Junction, MD"
+        },
+        {
+          "city": "Annapolis Junction",
+          "state": "Maryland",
+          "location": "Annapolis Junction, MD"
+        }
+      ],
       "error": ""
     },
     {
-      "query": "in Germantown, MD",
+      "query": "jobs in Burtonsville, MD",
       "status": "ok",
       "jobs_returned": 50,
+      "jobs_in_moco": 24,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        },
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 17,
+      "new_jobs_inserted": 16,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        }
+      ],
       "error": ""
     }
   ]
