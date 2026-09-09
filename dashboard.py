@@ -397,18 +397,28 @@ def build_retry_session() -> requests.Session:
 
 
 def _is_job_in_moco_light(job: Dict[str, Any]) -> bool:
-    city = str(job.get("job_city") or "").lower()
-    state = str(job.get("job_state") or "").lower()
-    loc = str(job.get("job_location") or "").lower()
+    city = str(job.get("job_city") or "").strip().lower()
+    state = str(job.get("job_state") or "").strip().lower()
+    loc = str(job.get("job_location") or "").strip().lower()
 
     moco_cities = [
-        "rockville", "bethesda", "silver spring", "gaithersburg", "germantown",
-        "wheaton", "takoma park", "chevy chase", "potomac", "olney", "kensington"
+        "rockville", "bethesda", "north bethesda", "silver spring", "gaithersburg",
+        "germantown", "montgomery village", "clarksburg", "wheaton", "takoma park",
+        "chevy chase", "potomac", "north potomac", "olney", "kensington",
+        "burtonsville", "damascus", "poolesville", "derwood", "aspen hill",
+        "cabin john", "glen echo", "garrett park", "washington grove", "laytonsville",
+        "brookeville", "barnesville", "boyds", "dickerson", "sandy spring",
+        "ashton", "spencerville", "colesville"
     ]
 
-    if state == "md" and any(c in city for c in moco_cities):
+    state_is_md = state in {"md", "maryland", "maryland, us", "maryland, usa"} or state.startswith("maryland")
+    loc_mentions_md = re.search(r"(^|[\s,])md($|[\s,])", loc) is not None or "maryland" in loc
+
+    if state_is_md and any(c == city or c in city for c in moco_cities):
         return True
-    if "montgomery county" in loc and "md" in loc:
+    if "montgomery county" in loc and loc_mentions_md:
+        return True
+    if loc_mentions_md and any(c in loc for c in moco_cities):
         return True
     return False
 
@@ -650,6 +660,24 @@ def build_daily_page(db_path: str) -> str:
 
     stats = read_latest_run_stats_for_date(db_path, run_date) if run_date else None
 
+    # Pull all unique jobs first seen on the latest run, not only jobs from
+    # companies that are brand-new to the database.
+    daily_job_rows = []
+    if run_date:
+        conn = connect_db(db_path)
+        if conn:
+            try:
+                daily_job_rows = conn.execute("""
+                    SELECT DISTINCT employer_name, job_title, job_city, job_state,
+                           job_posted_at, job_publisher, salary, apply_link
+                    FROM jobs
+                    WHERE first_seen_run_date = ?
+                    ORDER BY job_posted_at DESC, employer_name ASC, job_title ASC
+                    LIMIT 200
+                """, (run_date,)).fetchall()
+            finally:
+                conn.close()
+
     meta = (
         f'{pill("Last updated")} {now}<br/>'
         f'{pill("Latest daily run")} {run_date or "No runs yet"} &nbsp;'
@@ -660,6 +688,40 @@ def build_daily_page(db_path: str) -> str:
     body += render_stats_grid(stats, extra_note="Daily tab uses the latest run’s API-returned counts.")
 
     body += """
+  <h2>New job postings (latest daily run)</h2>
+  <p class="muted">Every unique Montgomery County job first captured on the latest run, including postings from employers already known to the monitor.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Job</th>
+        <th>Location</th>
+        <th>Posted</th>
+        <th>Publisher</th>
+        <th>Salary</th>
+      </tr>
+    </thead>
+    <tbody>
+"""
+    if daily_job_rows:
+        for employer_name, job_title, job_city, job_state, job_posted_at, job_publisher, salary, apply_link in daily_job_rows:
+            location = ", ".join([x for x in [job_city or "", job_state or ""] if x])
+            body += "<tr>"
+            body += f"<td>{employer_name or ''}</td>"
+            body += f"<td>{link(job_title or '', apply_link or '')}</td>"
+            body += f"<td>{location}</td>"
+            body += f"<td>{job_posted_at or ''}</td>"
+            body += f"<td>{job_publisher or ''}</td>"
+            body += f"<td>{salary or ''}</td>"
+            body += "</tr>"
+    else:
+        body += "<tr><td colspan='6'>No new unique jobs captured on the latest run.</td></tr>"
+
+    body += """
+    </tbody>
+  </table>
+
   <h2>New companies detected (latest daily run)</h2>
   <p class="muted">Companies first seen on the latest daily run. “Verified by Places” means a Google Places match was found whose coordinates fall inside the Montgomery County boundary.</p>
 
