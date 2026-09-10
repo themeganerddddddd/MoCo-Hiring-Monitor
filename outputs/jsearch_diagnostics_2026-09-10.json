@@ -1,0 +1,117 @@
+{
+  "run_date": "2026-09-10",
+  "started_utc": "2026-09-10T08:21:50Z",
+  "finished_utc": "2026-09-10T08:23:01Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 251,
+  "jobs_in_moco_count": 228,
+  "new_jobs_count": 217,
+  "new_companies_count": 41,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 44,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 47,
+      "new_companies_detected": 13,
+      "rejected_location_samples": [
+        {
+          "city": "Frederick",
+          "state": "Maryland",
+          "location": "Frederick, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 49,
+      "new_companies_detected": 11,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 50,
+      "new_jobs_inserted": 49,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 30,
+      "new_jobs_inserted": 28,
+      "new_companies_detected": 8,
+      "rejected_location_samples": [
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        },
+        {
+          "city": "Hyattsville",
+          "state": "Maryland",
+          "location": "Hyattsville, MD"
+        },
+        {
+          "city": "Lanham",
+          "state": "Maryland",
+          "location": "Lanham, MD"
+        },
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Lanham",
+          "state": "Maryland",
+          "location": "Lanham, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 1,
+      "jobs_in_moco": 1,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
