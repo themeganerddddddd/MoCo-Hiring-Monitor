@@ -1,0 +1,214 @@
+{
+  "run_date": "2026-09-11",
+  "started_utc": "2026-09-11T08:15:58Z",
+  "finished_utc": "2026-09-11T08:16:38Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 300,
+  "jobs_in_moco_count": 197,
+  "new_jobs_count": 138,
+  "new_companies_count": 29,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 25,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        },
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 33,
+      "new_companies_detected": 12,
+      "rejected_location_samples": [
+        {
+          "city": "North East",
+          "state": "Maryland",
+          "location": "North East, MD"
+        },
+        {
+          "city": "North East",
+          "state": "Maryland",
+          "location": "North East, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 40,
+      "new_jobs_inserted": 25,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 20,
+      "new_jobs_inserted": 19,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [
+        {
+          "city": "Bel Air",
+          "state": "Maryland",
+          "location": "Bel Air, MD"
+        },
+        {
+          "city": "Bel Air",
+          "state": "Maryland",
+          "location": "Bel Air, MD"
+        },
+        {
+          "city": "Westminster",
+          "state": "Maryland",
+          "location": "Westminster, MD"
+        },
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        },
+        {
+          "city": "Bowie",
+          "state": "Maryland",
+          "location": "Bowie, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 21,
+      "new_jobs_inserted": 19,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Glen Burnie",
+          "state": "Maryland",
+          "location": "Glen Burnie, MD"
+        },
+        {
+          "city": "Hyattsville",
+          "state": "Maryland",
+          "location": "Hyattsville, MD"
+        },
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 26,
+      "new_jobs_inserted": 17,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        },
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        },
+        {
+          "city": "Lanham",
+          "state": "Maryland",
+          "location": "Lanham, MD"
+        },
+        {
+          "city": "Annapolis Junction",
+          "state": "Maryland",
+          "location": "Annapolis Junction, MD"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
