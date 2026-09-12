@@ -1,0 +1,203 @@
+{
+  "run_date": "2026-09-12",
+  "started_utc": "2026-09-12T08:06:11Z",
+  "finished_utc": "2026-09-12T08:06:52Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 250,
+  "jobs_in_moco_count": 129,
+  "new_jobs_count": 56,
+  "new_companies_count": 7,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 38,
+      "new_jobs_inserted": 8,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 13,
+      "new_jobs_inserted": 13,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        },
+        {
+          "city": "University Park",
+          "state": "Maryland",
+          "location": "University Park, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 40,
+      "new_jobs_inserted": 22,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [
+        {
+          "city": "NC",
+          "state": "",
+          "location": "NC"
+        },
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Hyattsville",
+          "state": "Maryland",
+          "location": "Hyattsville, MD"
+        },
+        {
+          "city": "Baltimore",
+          "state": "Maryland",
+          "location": "Baltimore, MD"
+        },
+        {
+          "city": "Lanham",
+          "state": "Maryland",
+          "location": "Lanham, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 23,
+      "new_jobs_inserted": 5,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "Beltsville",
+          "state": "Maryland",
+          "location": "Beltsville, MD"
+        },
+        {
+          "city": "NC",
+          "state": "",
+          "location": "NC"
+        },
+        {
+          "city": "Bel Air",
+          "state": "Maryland",
+          "location": "Bel Air, MD"
+        },
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        },
+        {
+          "city": "Bel Air",
+          "state": "Maryland",
+          "location": "Bel Air, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 15,
+      "new_jobs_inserted": 8,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "Damascus",
+          "state": "Virginia",
+          "location": "Damascus, VA"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "",
+          "state": "Florida",
+          "location": "Anywhere, FL"
+        },
+        {
+          "city": "",
+          "state": "California",
+          "location": "Anywhere, CA"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
