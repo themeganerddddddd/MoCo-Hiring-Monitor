@@ -1,0 +1,126 @@
+{
+  "run_date": "2026-09-13",
+  "started_utc": "2026-09-13T08:30:44Z",
+  "finished_utc": "2026-09-13T08:33:04Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 296,
+  "jobs_in_moco_count": 259,
+  "new_jobs_count": 220,
+  "new_companies_count": 64,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 18,
+      "new_jobs_inserted": 3,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "OH",
+          "state": "",
+          "location": "OH"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 50,
+      "new_jobs_inserted": 45,
+      "new_companies_detected": 10,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 39,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 50,
+      "new_jobs_inserted": 45,
+      "new_companies_detected": 11,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 47,
+      "new_companies_detected": 16,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 41,
+      "new_companies_detected": 17,
+      "rejected_location_samples": [
+        {
+          "city": "Frederick",
+          "state": "Maryland",
+          "location": "Frederick, MD"
+        },
+        {
+          "city": "Frederick",
+          "state": "Maryland",
+          "location": "Frederick, MD"
+        },
+        {
+          "city": "Frederick",
+          "state": "Maryland",
+          "location": "Frederick, MD"
+        },
+        {
+          "city": "College Park",
+          "state": "Maryland",
+          "location": "College Park, MD"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
