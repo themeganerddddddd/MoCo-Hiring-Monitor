@@ -1,0 +1,209 @@
+{
+  "run_date": "2026-09-14",
+  "started_utc": "2026-09-14T09:13:13Z",
+  "finished_utc": "2026-09-14T09:13:57Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 300,
+  "jobs_in_moco_count": 210,
+  "new_jobs_count": 93,
+  "new_companies_count": 20,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 22,
+      "new_jobs_inserted": 1,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "OH",
+          "state": "",
+          "location": "OH"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 34,
+      "new_jobs_inserted": 7,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 40,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [
+        {
+          "city": "Clarksburg",
+          "state": "West Virginia",
+          "location": "Clarksburg, WV"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Anywhere, MD"
+        },
+        {
+          "city": "Clarksburg",
+          "state": "West Virginia",
+          "location": "Clarksburg, WV"
+        },
+        {
+          "city": "Clarksburg",
+          "state": "West Virginia",
+          "location": "Clarksburg, WV"
+        },
+        {
+          "city": "Clarksburg",
+          "state": "West Virginia",
+          "location": "Clarksburg, WV"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 33,
+      "new_jobs_inserted": 10,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "NC",
+          "state": "",
+          "location": "NC"
+        },
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Beltsville",
+          "state": "Maryland",
+          "location": "Beltsville, MD"
+        },
+        {
+          "city": "Greenbelt",
+          "state": "Maryland",
+          "location": "Greenbelt, MD"
+        },
+        {
+          "city": "Hyattsville",
+          "state": "Maryland",
+          "location": "Hyattsville, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 28,
+      "new_jobs_inserted": 11,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [
+        {
+          "city": "NC",
+          "state": "",
+          "location": "NC"
+        },
+        {
+          "city": "Ellicott City",
+          "state": "Maryland",
+          "location": "Ellicott City, MD"
+        },
+        {
+          "city": "Laurel",
+          "state": "Maryland",
+          "location": "Laurel, MD"
+        },
+        {
+          "city": "Columbia",
+          "state": "Maryland",
+          "location": "Columbia, MD"
+        },
+        {
+          "city": "NY",
+          "state": "",
+          "location": "NY"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
