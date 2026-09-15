@@ -1,0 +1,177 @@
+{
+  "run_date": "2026-09-15",
+  "started_utc": "2026-09-15T08:55:16Z",
+  "finished_utc": "2026-09-15T08:58:19Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 220,
+  "jobs_in_moco_count": 56,
+  "new_jobs_count": 32,
+  "new_companies_count": 10,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 12,
+      "new_jobs_inserted": 3,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "OH",
+          "state": "",
+          "location": "OH"
+        },
+        {
+          "city": "MD",
+          "state": "",
+          "location": "MD"
+        },
+        {
+          "city": "PA",
+          "state": "",
+          "location": "PA"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 10,
+      "new_jobs_inserted": 5,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "Severna Park",
+          "state": "Maryland",
+          "location": "Severna Park, MD"
+        },
+        {
+          "city": "Severna Park",
+          "state": "Maryland",
+          "location": "Severna Park, MD"
+        },
+        {
+          "city": "Lexington Park",
+          "state": "Maryland",
+          "location": "Lexington Park, MD"
+        },
+        {
+          "city": "Lexington Park",
+          "state": "Maryland",
+          "location": "Lexington Park, MD"
+        },
+        {
+          "city": "Severna Park",
+          "state": "Maryland",
+          "location": "Severna Park, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 10,
+      "jobs_in_moco": 10,
+      "new_jobs_inserted": 10,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "Kensington and Chelsea",
+          "state": "England",
+          "location": "Kensington and Chelsea, England"
+        },
+        {
+          "city": "Kensington and Chelsea",
+          "state": "England",
+          "location": "Kensington and Chelsea, England"
+        },
+        {
+          "city": "London",
+          "state": "England",
+          "location": "London, England"
+        },
+        {
+          "city": "London",
+          "state": "England",
+          "location": "London, England"
+        },
+        {
+          "city": "Kensington and Chelsea",
+          "state": "England",
+          "location": "Kensington and Chelsea, England"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 10,
+      "jobs_in_moco": 10,
+      "new_jobs_inserted": 10,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 14,
+      "new_jobs_inserted": 4,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "Damascus",
+          "state": "Virginia",
+          "location": "Damascus, VA"
+        },
+        {
+          "city": "",
+          "state": "Virginia",
+          "location": "Anywhere, VA"
+        },
+        {
+          "city": "",
+          "state": "New Jersey",
+          "location": "Anywhere, NJ"
+        },
+        {
+          "city": "Hancock",
+          "state": "Maryland",
+          "location": "Hancock, MD"
+        },
+        {
+          "city": "Capitol Heights",
+          "state": "Maryland",
+          "location": "Capitol Heights, MD"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
