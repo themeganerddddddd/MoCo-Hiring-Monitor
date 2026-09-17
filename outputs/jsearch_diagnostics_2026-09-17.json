@@ -1,0 +1,85 @@
+{
+  "run_date": "2026-09-17",
+  "started_utc": "2026-09-17T08:52:08Z",
+  "finished_utc": "2026-09-17T08:56:38Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 278,
+  "jobs_in_moco_count": 276,
+  "new_jobs_count": 236,
+  "new_companies_count": 36,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 27,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 47,
+      "new_companies_detected": 8,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 50,
+      "new_jobs_inserted": 38,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 48,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 40,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
