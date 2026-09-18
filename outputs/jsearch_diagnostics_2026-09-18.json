@@ -1,0 +1,118 @@
+{
+  "run_date": "2026-09-18",
+  "started_utc": "2026-09-18T08:27:36Z",
+  "finished_utc": "2026-09-18T08:31:41Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 271,
+  "jobs_in_moco_count": 263,
+  "new_jobs_count": 228,
+  "new_companies_count": 44,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 20,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        },
+        {
+          "city": "Hyattsville",
+          "state": "Maryland",
+          "location": "Hyattsville, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 42,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [
+        {
+          "city": "Bowie",
+          "state": "Maryland",
+          "location": "Bowie, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 39,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 45,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "jobs_in_moco": 40,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        },
+        {
+          "city": "Laurel",
+          "state": "Maryland",
+          "location": "Laurel, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 46,
+      "new_companies_detected": 10,
+      "rejected_location_samples": [
+        {
+          "city": "Mt Airy",
+          "state": "Maryland",
+          "location": "Mt Airy, MD"
+        }
+      ],
+      "error": ""
+    }
+  ]
+}
