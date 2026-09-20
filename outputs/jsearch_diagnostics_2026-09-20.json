@@ -1,0 +1,105 @@
+{
+  "run_date": "2026-09-20",
+  "started_utc": "2026-09-20T08:47:38Z",
+  "finished_utc": "2026-09-20T08:50:28Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 288,
+  "jobs_in_moco_count": 280,
+  "new_jobs_count": 192,
+  "new_companies_count": 35,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 23,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland   (+9 others)"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 38,
+      "new_companies_detected": 10,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 27,
+      "new_companies_detected": 7,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 29,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [
+        {
+          "city": "Hanover",
+          "state": "Maryland",
+          "location": "Hanover, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 40,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
