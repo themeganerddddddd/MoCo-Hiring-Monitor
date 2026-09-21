@@ -1,0 +1,136 @@
+{
+  "run_date": "2026-09-21",
+  "started_utc": "2026-09-21T09:15:04Z",
+  "finished_utc": "2026-09-21T09:17:43Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 289,
+  "jobs_in_moco_count": 272,
+  "new_jobs_count": 238,
+  "new_companies_count": 32,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 45,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Westlake, MD"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Hillandale, MD"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Cloverly, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 38,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 45,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 38,
+      "new_companies_detected": 8,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 37,
+      "new_jobs_inserted": 30,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": ""
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": ""
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": ""
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": ""
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": ""
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 50,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 44,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 43,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
