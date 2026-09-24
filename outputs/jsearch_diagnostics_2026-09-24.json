@@ -1,0 +1,100 @@
+{
+  "run_date": "2026-09-24",
+  "started_utc": "2026-09-24T08:42:26Z",
+  "finished_utc": "2026-09-24T08:49:35Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 276,
+  "jobs_in_moco_count": 271,
+  "new_jobs_count": 210,
+  "new_companies_count": 29,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 45,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 38,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 44,
+      "new_companies_detected": 15,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 34,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [
+        {
+          "city": "Laurel",
+          "state": "Maryland",
+          "location": "Laurel, MD"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "Laurel",
+          "state": "Maryland",
+          "location": "Laurel, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
