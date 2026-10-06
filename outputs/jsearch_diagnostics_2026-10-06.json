@@ -1,0 +1,90 @@
+{
+  "run_date": "2026-10-06",
+  "started_utc": "2026-10-06T10:42:42Z",
+  "finished_utc": "2026-10-06T10:43:32Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 180,
+  "jobs_in_moco_count": 177,
+  "new_jobs_count": 111,
+  "new_companies_count": 11,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 41,
+      "new_jobs_inserted": 25,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        },
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 25,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 28,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 33,
+      "new_companies_detected": 7,
+      "rejected_location_samples": [
+        {
+          "city": "Calverton",
+          "state": "Maryland",
+          "location": "Calverton, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
