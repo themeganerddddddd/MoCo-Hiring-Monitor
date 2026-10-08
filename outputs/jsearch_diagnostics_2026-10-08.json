@@ -1,0 +1,84 @@
+{
+  "run_date": "2026-10-08",
+  "started_utc": "2026-10-08T10:52:38Z",
+  "finished_utc": "2026-10-08T10:53:53Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 183,
+  "jobs_in_moco_count": 181,
+  "new_jobs_count": 122,
+  "new_companies_count": 22,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 8,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 25,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 37,
+      "new_companies_detected": 7,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
