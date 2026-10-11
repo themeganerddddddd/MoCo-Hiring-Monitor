@@ -1,0 +1,73 @@
+{
+  "run_date": "2026-10-11",
+  "started_utc": "2026-10-11T10:16:11Z",
+  "finished_utc": "2026-10-11T10:17:09Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 275,
+  "jobs_in_moco_count": 275,
+  "new_jobs_count": 191,
+  "new_companies_count": 35,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 20,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 48,
+      "new_companies_detected": 14,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 31,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 29,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 29,
+      "new_companies_detected": 8,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 34,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
