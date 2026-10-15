@@ -1,0 +1,100 @@
+{
+  "run_date": "2026-10-15",
+  "started_utc": "2026-10-15T08:33:04Z",
+  "finished_utc": "2026-10-15T08:34:50Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 276,
+  "jobs_in_moco_count": 271,
+  "new_jobs_count": 197,
+  "new_companies_count": 29,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 39,
+      "new_jobs_inserted": 19,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        },
+        {
+          "city": "Towson",
+          "state": "Maryland",
+          "location": "Towson, MD"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Takoma Park, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Potomac, MD",
+      "status": "ok",
+      "jobs_returned": 45,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 43,
+      "new_companies_detected": 10,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Kensington, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 26,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "Washington",
+          "state": "District of Columbia",
+          "location": "Washington, DC"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Burtonsville, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 39,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Damascus, MD",
+      "status": "ok",
+      "jobs_returned": 45,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
