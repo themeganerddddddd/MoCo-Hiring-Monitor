@@ -1,0 +1,85 @@
+{
+  "run_date": "2026-10-19",
+  "started_utc": "2026-10-19T09:14:40Z",
+  "finished_utc": "2026-10-19T09:17:42Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 272,
+  "jobs_in_moco_count": 270,
+  "new_jobs_count": 138,
+  "new_companies_count": 15,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 10,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 27,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 30,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 20,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 42,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 28,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 23,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
