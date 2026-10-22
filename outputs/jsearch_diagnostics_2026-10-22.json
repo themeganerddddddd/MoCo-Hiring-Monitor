@@ -1,0 +1,91 @@
+{
+  "run_date": "2026-10-22",
+  "started_utc": "2026-10-22T08:52:44Z",
+  "finished_utc": "2026-10-22T08:55:05Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 281,
+  "jobs_in_moco_count": 278,
+  "new_jobs_count": 193,
+  "new_companies_count": 38,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 28,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 35,
+      "new_companies_detected": 7,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 13,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 47,
+      "new_jobs_inserted": 27,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 37,
+      "new_companies_detected": 9,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 30,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
