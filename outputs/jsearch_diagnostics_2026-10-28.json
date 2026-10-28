@@ -1,0 +1,73 @@
+{
+  "run_date": "2026-10-28",
+  "started_utc": "2026-10-28T09:58:06Z",
+  "finished_utc": "2026-10-28T09:59:31Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 0,
+  "jobs_in_moco_count": 0,
+  "new_jobs_count": 0,
+  "new_companies_count": 0,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "error",
+      "jobs_returned": 0,
+      "jobs_in_moco": 0,
+      "new_jobs_inserted": 0,
+      "new_companies_detected": 0,
+      "rejected_location_samples": [],
+      "error": "JSearch returned non-list data: dict"
+    }
+  ]
+}
