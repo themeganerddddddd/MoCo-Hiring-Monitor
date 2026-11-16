@@ -1,0 +1,95 @@
+{
+  "run_date": "2026-11-16",
+  "started_utc": "2026-11-16T11:57:23Z",
+  "finished_utc": "2026-11-16T11:57:55Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 281,
+  "jobs_in_moco_count": 277,
+  "new_jobs_count": 182,
+  "new_companies_count": 17,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 45,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 12,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "Maryland",
+          "location": "Maryland"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in North Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 47,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Montgomery Village, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 31,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Clarksburg, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 43,
+      "new_jobs_inserted": 33,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Wheaton, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 49,
+      "new_jobs_inserted": 33,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Olney, MD",
+      "status": "ok",
+      "jobs_returned": 48,
+      "jobs_in_moco": 48,
+      "new_jobs_inserted": 37,
+      "new_companies_detected": 1,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
