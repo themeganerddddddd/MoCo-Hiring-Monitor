@@ -1,0 +1,100 @@
+{
+  "run_date": "2026-11-21",
+  "started_utc": "2026-11-21T11:39:00Z",
+  "finished_utc": "2026-11-21T11:39:49Z",
+  "date_posted": "week",
+  "num_pages": 5,
+  "jobs_scanned_count": 270,
+  "jobs_in_moco_count": 265,
+  "new_jobs_count": 168,
+  "new_companies_count": 26,
+  "queries": [
+    {
+      "query": "jobs in Montgomery County, MD",
+      "status": "ok",
+      "jobs_returned": 49,
+      "jobs_in_moco": 45,
+      "new_jobs_inserted": 26,
+      "new_companies_detected": 2,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        },
+        {
+          "city": "Westlake",
+          "state": "Maryland",
+          "location": "Westlake, MD"
+        },
+        {
+          "city": "Clarksville",
+          "state": "Maryland",
+          "location": "Clarksville, MD"
+        },
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Rockville, MD",
+      "status": "ok",
+      "jobs_returned": 43,
+      "jobs_in_moco": 42,
+      "new_jobs_inserted": 26,
+      "new_companies_detected": 5,
+      "rejected_location_samples": [
+        {
+          "city": "",
+          "state": "",
+          "location": "Anywhere"
+        }
+      ],
+      "error": ""
+    },
+    {
+      "query": "jobs in Bethesda, MD",
+      "status": "ok",
+      "jobs_returned": 46,
+      "jobs_in_moco": 46,
+      "new_jobs_inserted": 36,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Silver Spring, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 3,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Gaithersburg, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 24,
+      "new_companies_detected": 6,
+      "rejected_location_samples": [],
+      "error": ""
+    },
+    {
+      "query": "jobs in Germantown, MD",
+      "status": "ok",
+      "jobs_returned": 44,
+      "jobs_in_moco": 44,
+      "new_jobs_inserted": 32,
+      "new_companies_detected": 4,
+      "rejected_location_samples": [],
+      "error": ""
+    }
+  ]
+}
